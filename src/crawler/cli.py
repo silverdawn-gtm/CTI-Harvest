@@ -20,3 +20,13 @@ def db_ping() -> None:
         typer.secho(f"FAILED: {exc}", fg=typer.colors.RED)
         raise typer.Exit(code=1) from exc
     typer.secho(f"OK: PostgreSQL {version}", fg=typer.colors.GREEN)
+
+
+@db_app.command("upgrade")
+def db_upgrade() -> None:
+    """Apply all pending database migrations."""
+    from alembic import command
+    from alembic.config import Config
+
+    command.upgrade(Config("alembic.ini"), "head")
+    typer.secho("Migrations applied.", fg=typer.colors.GREEN)

@@ -39,3 +39,11 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+# UP017 rewrites datetime.timezone.utc to datetime.UTC. The design mandates
+# datetime.now(timezone.utc) verbatim for every stored timestamp, so keep that spelling.
+ignore = ["UP017"]
+
+[tool.ruff.lint.isort]
+# The migrations live in ./alembic, which makes ruff guess that the `alembic`
+# distribution is first-party. It is not.
+known-third-party = ["alembic"]
