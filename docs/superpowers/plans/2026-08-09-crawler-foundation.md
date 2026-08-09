@@ -103,18 +103,18 @@ from crawler.config import Settings
 
 
 def test_settings_read_from_env(monkeypatch, tmp_path):
-    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5432/crawler")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5433/crawler")
     monkeypatch.setenv("RAW_ARCHIVE_DIR", str(tmp_path / "raw"))
 
     settings = Settings()
 
-    assert settings.database_url == "postgresql+psycopg://u:p@localhost:5432/crawler"
+    assert settings.database_url == "postgresql+psycopg://u:p@localhost:5433/crawler"
     assert settings.raw_archive_dir == Path(tmp_path / "raw")
     assert "crawler" in settings.user_agent.lower()
 
 
 def test_user_agent_has_contact_info(monkeypatch):
-    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5432/crawler")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5433/crawler")
 
     settings = Settings()
 
@@ -171,7 +171,9 @@ services:
       POSTGRES_PASSWORD: crawler
       POSTGRES_DB: crawler
     ports:
-      - "5432:5432"
+      # Host port 5433, not 5432: a native Windows PostgreSQL 17 service already
+      # holds 5432 on this machine and is left untouched.
+      - "5433:5432"
     volumes:
       - crawler-pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -187,12 +189,13 @@ volumes:
 - [ ] **Step 8: Create `.env.example`**
 
 ```
-# Postgres runs in Docker under WSL; reachable from Windows via localhost forwarding.
-DATABASE_URL=postgresql+psycopg://crawler:crawler@localhost:5432/crawler
+# Postgres runs in Docker under WSL, published on host port 5433 (5432 is taken by a
+# native Windows PostgreSQL 17 service). Reachable from Windows via mirrored networking.
+DATABASE_URL=postgresql+psycopg://crawler:crawler@localhost:5433/crawler
 
 # Separate database used by the test suite. Create it once with:
 #   docker exec crawler-db createdb -U crawler crawler_test
-TEST_DATABASE_URL=postgresql+psycopg://crawler:crawler@localhost:5432/crawler_test
+TEST_DATABASE_URL=postgresql+psycopg://crawler:crawler@localhost:5433/crawler_test
 
 RAW_ARCHIVE_DIR=data/raw
 ```
@@ -240,7 +243,10 @@ def db_ping() -> None:
 Run: `uv run crawler db ping`
 Expected: `OK: PostgreSQL 16.x`
 
-If this fails with a connection refused error, WSL2 localhost forwarding is the cause, not the code. Get the WSL IP with `wsl hostname -I` and use that host in `DATABASE_URL` instead of `localhost`.
+This machine runs WSL2 in **mirrored networking mode**, so `localhost` resolves across the
+Windows/WSL boundary without extra configuration. If it fails with connection refused, check
+that the container is actually up and healthy before suspecting networking:
+`wsl -e bash -c "docker exec crawler-db pg_isready -U crawler"`.
 
 - [ ] **Step 12: Commit**
 
