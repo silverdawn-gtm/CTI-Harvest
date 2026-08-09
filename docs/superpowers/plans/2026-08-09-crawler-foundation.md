@@ -166,6 +166,9 @@ services:
   db:
     image: postgres:16
     container_name: crawler-db
+    # Without this the container stays down after the WSL2 VM idles out, and every
+    # database command fails with a timeout that looks like a networking fault.
+    restart: unless-stopped
     environment:
       POSTGRES_USER: crawler
       POSTGRES_PASSWORD: crawler
@@ -331,18 +334,17 @@ def test_url_hash_is_unique(db_session):
 - [ ] **Step 2: Write `tests/conftest.py`**
 
 ```python
-import os
-
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from crawler.config import get_settings
 from crawler.db.schema import Base
 
 
 @pytest.fixture(scope="session")
 def engine():
-    url = os.environ.get("TEST_DATABASE_URL")
+    url = get_settings().test_database_url
     if not url:
         pytest.skip("TEST_DATABASE_URL not set; skipping database tests")
     eng = create_engine(url)
@@ -367,6 +369,22 @@ def db_session(engine):
 ```
 
 The rollback means tests never leave rows behind and can run in any order.
+
+**Read the URL through `get_settings()`, not `os.environ`.** `.env` is gitignored and is loaded
+by pydantic-settings, not exported into the shell — so `os.environ.get("TEST_DATABASE_URL")`
+would return `None` and every database test would *skip silently* while the suite still
+reported success.
+
+Add a test that proves the fixture is actually connected, so a silent skip can never masquerade
+as a pass:
+
+```python
+def test_database_tests_are_actually_running(db_session):
+    """Guards against TEST_DATABASE_URL being unset and every db test skipping unnoticed."""
+    from sqlalchemy import text
+
+    assert db_session.execute(text("SELECT 1")).scalar() == 1
+```
 
 - [ ] **Step 3: Run the test to verify it fails**
 
