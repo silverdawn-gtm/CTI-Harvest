@@ -194,11 +194,11 @@ volumes:
 ```
 # Postgres runs in Docker under WSL, published on host port 5433 (5432 is taken by a
 # native Windows PostgreSQL 17 service). Reachable from Windows via mirrored networking.
-DATABASE_URL=postgresql+psycopg://crawler:crawler@localhost:5433/crawler
+DATABASE_URL=postgresql+psycopg://crawler:crawler@127.0.0.1:5433/crawler
 
 # Separate database used by the test suite. Create it once with:
 #   docker exec crawler-db createdb -U crawler crawler_test
-TEST_DATABASE_URL=postgresql+psycopg://crawler:crawler@localhost:5433/crawler_test
+TEST_DATABASE_URL=postgresql+psycopg://crawler:crawler@127.0.0.1:5433/crawler_test
 
 RAW_ARCHIVE_DIR=data/raw
 ```
