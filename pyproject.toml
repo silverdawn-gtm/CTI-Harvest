@@ -1,0 +1,41 @@
+[project]
+name = "crawler"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Goutham krishna K S", email = "silverdawn1011@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.19.1",
+    "httpx>=0.28.1",
+    "psycopg[binary]>=3.3.4",
+    "pydantic-settings>=2.15.0",
+    "sqlalchemy>=2.0.51",
+    "typer>=0.27.1",
+]
+
+[project.scripts]
+crawler = "crawler.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.12.2,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
