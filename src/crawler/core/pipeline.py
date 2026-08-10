@@ -53,7 +53,10 @@ async def run_source(source, fetcher, archive, session: Session, since: datetime
         if raw is None:  # 304 Not Modified
             continue
 
-        if existing is not None and existing.content_hash == raw.content_hash:
+        # A byte-identical payload teaches us nothing new, so skip archiving and re-parsing.
+        # Checked against stored content rather than the fetched URL: multi-document sources
+        # yield many documents from one file, and that file's URL has no `documents` row.
+        if repo.content_seen(session, source.name, raw.content_hash):
             continue
 
         run.fetched += 1

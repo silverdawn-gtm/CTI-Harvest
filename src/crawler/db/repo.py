@@ -21,6 +21,23 @@ def get_document_by_url_hash(session: Session, url_hash: str) -> Document | None
     ).scalar_one_or_none()
 
 
+def content_seen(session: Session, source: str, content_hash: str) -> bool:
+    """True when this source already stored a document with byte-identical content.
+
+    Keyed on content rather than URL because a single fetched file may yield many documents
+    (the KEV catalog is one JSON file holding ~1,200 vulnerabilities). In that shape the
+    fetched URL never gets a `documents` row of its own, so a URL-keyed check can never fire.
+    """
+    return (
+        session.execute(
+            select(Document.id)
+            .where(Document.source == source, Document.content_hash == content_hash)
+            .limit(1)
+        ).first()
+        is not None
+    )
+
+
 def upsert_document(
     session: Session, parsed: ParsedDoc, raw: RawDocument, raw_path: str | None
 ) -> tuple[Document, bool]:
