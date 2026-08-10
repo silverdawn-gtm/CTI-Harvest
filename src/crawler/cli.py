@@ -77,7 +77,9 @@ def crawl(
         archive = RawArchive(settings.raw_archive_dir)
         for target in targets:
             with session_scope() as session:
-                run = await run_source(target, fetcher, archive, session, since)
+                run = await run_source(
+                    target, fetcher, archive, session, since, commit_batches=True
+                )
                 typer.echo(
                     f"{target.name}: discovered={run.discovered} fetched={run.fetched} "
                     f"parsed={run.parsed} failed={run.failed} status={run.status}"
@@ -102,7 +104,13 @@ def backfill(
         for target in targets:
             with session_scope() as session:
                 run = await run_source(
-                    target, fetcher, archive, session, start, mode="backfill"
+                    target,
+                    fetcher,
+                    archive,
+                    session,
+                    start,
+                    mode="backfill",
+                    commit_batches=True,
                 )
                 typer.echo(
                     f"{target.name}: discovered={run.discovered} fetched={run.fetched} "

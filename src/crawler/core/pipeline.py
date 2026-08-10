@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 CIRCUIT_BREAKER_THRESHOLD = 5
 COMMIT_EVERY = 50
+# A single NVD page carries 2000 CVE facts, so counting items alone would let a long backfill
+# ride on one enormous transaction. Count persisted rows too.
+COMMIT_EVERY_UNITS = 1000
 
 
 async def run_source(
@@ -20,14 +23,22 @@ async def run_source(
     session: Session,
     since: datetime,
     mode: str = "incremental",
+    commit_batches: bool = False,
 ) -> CrawlRun:
-    """Discover, fetch, archive, parse, and persist everything one source offers."""
+    """Discover, fetch, archive, parse, and persist everything one source offers.
+
+    `commit_batches` makes progress durable as it goes. Off by default so tests can run inside
+    a transaction that is rolled back; the CLI turns it on, because a multi-hour backfill that
+    loses everything on the last page is not resumable in any useful sense.
+    """
     repo.ensure_source(session, source.name, source.kind, source.license)
     run = repo.start_run(session, source.name)
     session.flush()
 
     try:
-        result = await _drain(source, fetcher, archive, session, since, run, mode)
+        result = await _drain(
+            source, fetcher, archive, session, since, run, mode, commit_batches
+        )
     except FetchError as exc:
         # Discovery itself failed — a dead feed URL, a 403 on the index. Quarantine this
         # source and let the rest of the crawl continue; only a database outage aborts
@@ -43,10 +54,11 @@ async def run_source(
 
 
 async def _drain(
-    source, fetcher, archive, session: Session, since: datetime, run, mode: str
+    source, fetcher, archive, session: Session, since: datetime, run, mode: str, commit: bool
 ) -> CrawlRun:
     consecutive_failures = 0
     processed_since_commit = 0
+    units_since_commit = 0
     status = "ok"
 
     async for item in source.discover(since, fetcher, mode):
@@ -104,9 +116,12 @@ async def _drain(
             logger.warning("parse warning [%s]: %s", source.name, warning)
 
         processed_since_commit += 1
-        if processed_since_commit >= COMMIT_EVERY:
-            session.flush()
+        units_since_commit += len(result.documents) + len(result.vulnerabilities)
+
+        if processed_since_commit >= COMMIT_EVERY or units_since_commit >= COMMIT_EVERY_UNITS:
+            session.commit() if commit else session.flush()
             processed_since_commit = 0
+            units_since_commit = 0
 
     repo.finish_run(session, run, status)
     if status == "ok":
