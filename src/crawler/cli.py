@@ -1,9 +1,10 @@
 import asyncio
+import re
 from datetime import datetime, timedelta, timezone
 
 import httpx
 import typer
-from sqlalchemy import create_engine, func, select, text
+from sqlalchemy import and_, create_engine, delete, func, or_, select, text, update
 
 from crawler.config import get_settings
 from crawler.core.archive import RawArchive
@@ -126,6 +127,105 @@ def backfill(
     targets = _targets(source)
 
     asyncio.run(_run_targets(targets, start, "backfill"))
+
+
+# Index, tag, and author pages get into sitemaps alongside real articles. They extract to a
+# few hundred characters of navigation chrome and are pure noise in a training corpus.
+JUNK_PATH_MARKERS = ("/tag/", "/tags/", "/author/", "/category/", "/page/")
+MIN_ARTICLE_CHARS = 500
+_URL_DATE = re.compile(r"/(20\d{2})/(\d{2})/")
+
+
+@app.command()
+def clean(
+    apply: bool = typer.Option(False, "--apply", help="Delete. Without this it is a dry run."),
+) -> None:
+    """Remove non-article pages and duplicates, and recover dates the crawl could not store."""
+    from crawler.db.schema import Document
+
+    with session_scope() as session:
+        # KEV entries are short by nature -- a CVE blurb is not a failed extraction.
+        news = Document.source != "kev"
+
+        junk_url = or_(*(Document.url.contains(m) for m in JUNK_PATH_MARKERS))
+        short = func.length(func.coalesce(Document.body_text, "")) < MIN_ARTICLE_CHARS
+
+        doomed: set[int] = set()
+        for label, condition in (
+            ("non-article path", and_(news, junk_url)),
+            (f"body under {MIN_ARTICLE_CHARS} chars", and_(news, short)),
+        ):
+            ids = set(session.execute(select(Document.id).where(condition)).scalars().all())
+            typer.echo(f"  {label:<28} {len(ids):>6}")
+            doomed |= ids
+
+        # Duplicate *bodies*, not content_hash: content_hash is the hash of the raw fetch, so
+        # every document from one WordPress page or the KEV catalog already shares it.
+        body_md5 = func.md5(Document.body_text)
+        dupe_hashes = (
+            select(body_md5)
+            .where(news, func.length(func.coalesce(Document.body_text, "")) > 0)
+            .group_by(body_md5)
+            .having(func.count(Document.id) > 1)
+            .subquery()
+        )
+        keepers = (
+            select(func.min(Document.id))
+            .where(news, body_md5.in_(select(dupe_hashes.c[0])))
+            .group_by(body_md5)
+            .subquery()
+        )
+        dupe_ids = set(
+            session.execute(
+                select(Document.id).where(
+                    news,
+                    body_md5.in_(select(dupe_hashes.c[0])),
+                    Document.id.notin_(select(keepers.c[0])),
+                )
+            )
+            .scalars()
+            .all()
+        )
+        typer.echo(f"  {'duplicate body (keep first)':<28} {len(dupe_ids):>6}")
+        doomed |= dupe_ids
+
+        # Recovery, not deletion: sitemaps without <lastmod> left published_at null, but the
+        # date is sitting in the URL path.
+        undated = session.execute(
+            select(Document.id, Document.url).where(news, Document.published_at.is_(None))
+        ).all()
+        datable = [
+            (doc_id, _URL_DATE.search(url))
+            for doc_id, url in undated
+            if doc_id not in doomed and _URL_DATE.search(url)
+        ]
+        typer.echo(f"  {'dates recoverable from url':<28} {len(datable):>6}")
+
+        typer.echo(f"\n  {'TO DELETE':<28} {len(doomed):>6}")
+
+        if not apply:
+            typer.secho("\nDry run. Re-run with --apply to make these changes.", fg="yellow")
+            return
+
+        for doc_id, match in datable:
+            session.execute(
+                update(Document)
+                .where(Document.id == doc_id)
+                .values(
+                    published_at=datetime(
+                        int(match.group(1)), int(match.group(2)), 1, tzinfo=timezone.utc
+                    )
+                )
+            )
+        if doomed:
+            session.execute(
+                delete(Document).where(Document.id.in_(doomed)).execution_options(
+                    synchronize_session=False
+                )
+            )
+        typer.secho(
+            f"Deleted {len(doomed)} documents, dated {len(datable)}.", fg=typer.colors.GREEN
+        )
 
 
 @app.command()
