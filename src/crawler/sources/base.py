@@ -1,9 +1,13 @@
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
 
 from crawler.core.models import DiscoveredItem, ParsedDoc, RawDocument
+
+if TYPE_CHECKING:
+    # Type-only: importing Fetcher at runtime would cycle back through core.ratelimit.
+    from crawler.core.fetch import Fetcher
 
 
 @dataclass(frozen=True)
@@ -19,8 +23,15 @@ class Source(Protocol):
     license: str
     rate_limit: RateLimit
 
-    def discover(self, since: datetime) -> AsyncIterator[DiscoveredItem]:
-        """Yield items to fetch that may have changed since `since`."""
+    def discover(self, since: datetime, fetcher: "Fetcher | None" = None) -> AsyncIterator[
+        DiscoveredItem
+    ]:
+        """Yield items to fetch that may have changed since `since`.
+
+        Feed- and API-backed sources need `fetcher` to enumerate what exists: an RSS adapter
+        must read the feed before it knows any article URLs. Sources that already know their
+        URLs, like KEV, ignore it.
+        """
         ...
 
     def parse(self, raw: RawDocument) -> list[ParsedDoc]:

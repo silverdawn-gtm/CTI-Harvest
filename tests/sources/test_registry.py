@@ -9,7 +9,7 @@ class _Fake:
     license = "public-domain"
     rate_limit = RateLimit(requests=1, per_seconds=1.0)
 
-    async def discover(self, since):
+    async def discover(self, since, fetcher=None):
         yield None
 
     def parse(self, raw):

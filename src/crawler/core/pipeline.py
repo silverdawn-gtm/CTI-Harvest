@@ -23,7 +23,7 @@ async def run_source(source, fetcher, archive, session: Session, since: datetime
     processed_since_commit = 0
     status = "ok"
 
-    async for item in source.discover(since):
+    async for item in source.discover(since, fetcher):
         run.discovered += 1
 
         existing = repo.get_document_by_url_hash(session, item.url_hash)

@@ -18,7 +18,7 @@ class StubSource:
     def __init__(self, urls):
         self._urls = urls
 
-    async def discover(self, since):
+    async def discover(self, since, fetcher=None):
         for url in self._urls:
             yield DiscoveredItem(url=url, source=self.name)
 

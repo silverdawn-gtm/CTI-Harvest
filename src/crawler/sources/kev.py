@@ -30,7 +30,7 @@ class KevSource:
     license = "public-domain"
     rate_limit = RateLimit(requests=1, per_seconds=2.0)
 
-    async def discover(self, since: datetime) -> AsyncIterator[DiscoveredItem]:
+    async def discover(self, since: datetime, fetcher=None) -> AsyncIterator[DiscoveredItem]:
         yield DiscoveredItem(url=self.CATALOG_URL, source=self.name)
 
     def parse(self, raw: RawDocument) -> list[ParsedDoc]:

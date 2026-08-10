@@ -1,1 +1,1 @@
-from crawler.sources import kev  # noqa: F401  - imported for its registration side effect
+from crawler.sources import kev, news_rss  # noqa: F401  - imported for registration side effects
