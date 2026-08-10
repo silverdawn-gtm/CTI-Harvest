@@ -19,6 +19,23 @@ async def run_source(source, fetcher, archive, session: Session, since: datetime
     run = repo.start_run(session, source.name)
     session.flush()
 
+    try:
+        result = await _drain(source, fetcher, archive, session, since, run)
+    except FetchError as exc:
+        # Discovery itself failed — a dead feed URL, a 403 on the index. Quarantine this
+        # source and let the rest of the crawl continue; only a database outage aborts
+        # everything. Without this the first bad feed kills the whole run.
+        logger.warning("discovery failed for %s: %s", source.name, exc)
+        repo.record_fetch_error(
+            session, source.name, f"discovery://{source.name}", type(exc).__name__, str(exc)
+        )
+        repo.finish_run(session, run, "discover_failed", note=str(exc))
+        session.flush()
+        return run
+    return result
+
+
+async def _drain(source, fetcher, archive, session: Session, since: datetime, run) -> CrawlRun:
     consecutive_failures = 0
     processed_since_commit = 0
     status = "ok"

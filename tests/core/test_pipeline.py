@@ -118,6 +118,24 @@ async def test_permanent_error_is_recorded_and_run_continues(db_session):
     assert run.status == "ok"
 
 
+async def test_failure_in_discover_quarantines_the_source_without_aborting(db_session):
+    """A dead feed URL must not take down the whole crawl -- only a DB outage does that."""
+    repo.ensure_source(db_session, "stub", "api", "public-domain")
+
+    class ExplodingSource(StubSource):
+        async def discover(self, since, fetcher=None):
+            raise PermanentFetchError("404 for https://example.org/feed")
+            yield  # pragma: no cover - unreachable, makes this an async generator
+
+    run = await run_source(
+        ExplodingSource([]), StubFetcher({}), StubArchive(), db_session, since=NOW
+    )
+
+    assert run.status == "discover_failed"
+    assert run.discovered == 0
+    assert "404" in run.note
+
+
 async def test_circuit_breaker_opens_after_five_consecutive_failures(db_session):
     repo.ensure_source(db_session, "stub", "api", "public-domain")
     urls = [f"https://example.org/{i}" for i in range(10)]

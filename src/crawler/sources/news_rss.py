@@ -27,12 +27,18 @@ SITES: list[tuple[str, str]] = [
     ("krebsonsecurity", "https://krebsonsecurity.com/feed/"),
     ("securityweek", "https://www.securityweek.com/feed/"),
     ("therecord", "https://therecord.media/feed"),
-    ("darkreading", "https://www.darkreading.com/rss.xml"),
     ("talos", "https://blog.talosintelligence.com/rss/"),
     ("unit42", "https://unit42.paloaltonetworks.com/feed/"),
-    ("googletag", "https://blog.google/threat-analysis-group/rss/"),
     ("sentinelone", "https://www.sentinelone.com/blog/feed/"),
+    ("microsoft", "https://www.microsoft.com/en-us/security/blog/feed/"),
+    ("malwarebytes", "https://www.malwarebytes.com/blog/feed/index.xml"),
+    ("projectzero", "https://googleprojectzero.blogspot.com/feeds/posts/default"),
 ]
+
+# Removed rather than worked around:
+#   darkreading  - returns 403 on every article; the publisher refuses automated clients,
+#                  and spoofing a browser User-Agent to get past that is not acceptable.
+#   googletag    - https://blog.google/threat-analysis-group/rss/ now 404s.
 
 
 def _entry_published(entry) -> datetime | None:
