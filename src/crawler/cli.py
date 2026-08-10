@@ -23,6 +23,48 @@ sources_app = typer.Typer(help="Source registry.")
 app.add_typer(sources_app, name="sources")
 
 
+# Rate limiting is per-domain, so running sources side by side is no less polite to any one
+# publisher -- it just stops a slow archive from blocking every other site behind it.
+MAX_CONCURRENT_SOURCES = 6
+
+
+async def _run_targets(targets, since, mode: str) -> None:
+    settings = get_settings()
+    fetcher = build_fetcher()
+    archive = RawArchive(settings.raw_archive_dir)
+    gate = asyncio.Semaphore(MAX_CONCURRENT_SOURCES)
+
+    async def one(target) -> str:
+        async with gate:
+            try:
+                with session_scope() as session:
+                    run = await run_source(
+                        target,
+                        fetcher,
+                        archive,
+                        session,
+                        since,
+                        mode=mode,
+                        commit_batches=True,
+                    )
+                    return (
+                        f"{target.name}: discovered={run.discovered} fetched={run.fetched} "
+                        f"parsed={run.parsed} failed={run.failed} status={run.status}"
+                    )
+            except Exception as exc:  # noqa: BLE001 - one source must not sink the others
+                return f"{target.name}: ABORTED {type(exc).__name__}: {exc}"
+
+    for done in asyncio.as_completed([one(t) for t in targets]):
+        typer.echo(await done)
+
+
+def _targets(source: str | None):
+    """`--source a,b,c` selects several; omitting it selects everything registered."""
+    if not source:
+        return source_registry.all_sources()
+    return [source_registry.get_source(name.strip()) for name in source.split(",") if name.strip()]
+
+
 def build_fetcher() -> Fetcher:
     settings = get_settings()
     client = httpx.AsyncClient(timeout=settings.request_timeout)
@@ -64,60 +106,26 @@ def sources_list() -> None:
 
 @app.command()
 def crawl(
-    source: str | None = typer.Option(None, help="Only crawl this source."),
+    source: str | None = typer.Option(None, help="Comma-separated source names."),
     since_days: int = typer.Option(30, help="Look back this many days."),
 ) -> None:
     """Fetch new documents from every enabled source."""
-    settings = get_settings()
     since = datetime.now(timezone.utc) - timedelta(days=since_days)
-    targets = [source_registry.get_source(source)] if source else source_registry.all_sources()
+    targets = _targets(source)
 
-    async def _run() -> None:
-        fetcher = build_fetcher()
-        archive = RawArchive(settings.raw_archive_dir)
-        for target in targets:
-            with session_scope() as session:
-                run = await run_source(
-                    target, fetcher, archive, session, since, commit_batches=True
-                )
-                typer.echo(
-                    f"{target.name}: discovered={run.discovered} fetched={run.fetched} "
-                    f"parsed={run.parsed} failed={run.failed} status={run.status}"
-                )
-
-    asyncio.run(_run())
+    asyncio.run(_run_targets(targets, since, "incremental"))
 
 
 @app.command()
 def backfill(
     since: str = typer.Option(..., help="Load history from this date, e.g. 2024-08-01."),
-    source: str | None = typer.Option(None, help="Only backfill this source."),
+    source: str | None = typer.Option(None, help="Comma-separated source names."),
 ) -> None:
     """Load historical data. Queries by publication date rather than modification date."""
-    settings = get_settings()
     start = datetime.fromisoformat(since).replace(tzinfo=timezone.utc)
-    targets = [source_registry.get_source(source)] if source else source_registry.all_sources()
+    targets = _targets(source)
 
-    async def _run() -> None:
-        fetcher = build_fetcher()
-        archive = RawArchive(settings.raw_archive_dir)
-        for target in targets:
-            with session_scope() as session:
-                run = await run_source(
-                    target,
-                    fetcher,
-                    archive,
-                    session,
-                    start,
-                    mode="backfill",
-                    commit_batches=True,
-                )
-                typer.echo(
-                    f"{target.name}: discovered={run.discovered} fetched={run.fetched} "
-                    f"parsed={run.parsed} failed={run.failed} status={run.status}"
-                )
-
-    asyncio.run(_run())
+    asyncio.run(_run_targets(targets, start, "backfill"))
 
 
 @app.command()

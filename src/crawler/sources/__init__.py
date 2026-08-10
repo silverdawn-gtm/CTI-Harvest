@@ -2,5 +2,6 @@ from crawler.sources import (  # noqa: F401  - imported for registration side ef
     kev,
     news_rss,
     nvd,
+    sitemap,
     wordpress,
 )

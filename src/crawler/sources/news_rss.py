@@ -23,18 +23,18 @@ MIN_BODY_CHARS = 200
 
 SITES: list[tuple[str, str]] = [
     ("bleepingcomputer", "https://www.bleepingcomputer.com/feed/"),
-    ("thehackernews", "https://feeds.feedburner.com/TheHackersNews"),
-    ("krebsonsecurity", "https://krebsonsecurity.com/feed/"),
     ("securityweek", "https://www.securityweek.com/feed/"),
-    ("therecord", "https://therecord.media/feed"),
-    ("talos", "https://blog.talosintelligence.com/rss/"),
-    ("sentinelone", "https://www.sentinelone.com/blog/feed/"),
-    ("malwarebytes", "https://www.malwarebytes.com/blog/feed/index.xml"),
     ("projectzero", "https://googleprojectzero.blogspot.com/feeds/posts/default"),
 ]
 
-# unit42 and microsoft are served by wordpress.py instead: their WordPress REST API returns
-# 100 full-text posts per request, so RSS would be both slower and shallower.
+# Only the sites with no better route are left here. RSS carries a few weeks at most, so
+# anything reachable another way is served by that adapter instead:
+#   wordpress.py - unit42, microsoft (100 full-text posts per request)
+#   sitemap.py   - krebsonsecurity, thehackernews, therecord, talos, sentinelone,
+#                  malwarebytes (whole archive, one request per article)
+#
+# bleepingcomputer publishes gzipped .txt.gz sitemaps mixed with forum threads, and
+# securityweek returns 403 on both its sitemap and its WordPress API, so both stay on RSS.
 #
 # Removed rather than worked around:
 #   darkreading  - returns 403 on every article; the publisher refuses automated clients,
