@@ -32,8 +32,12 @@ def make_raw(html: bytes, summary: str = "", title: str | None = "A Title") -> R
     )
 
 
+def _documents(raw: RawDocument):
+    return SOURCE.parse(raw).documents
+
+
 def test_extracts_article_body():
-    docs = SOURCE.parse(make_raw(ARTICLE))
+    docs = _documents(make_raw(ARTICLE))
 
     assert len(docs) == 1
     assert "Ransomware operators exploited" in docs[0].body_text
@@ -43,14 +47,14 @@ def test_extracts_article_body():
 
 
 def test_thin_page_falls_back_to_feed_summary():
-    docs = SOURCE.parse(make_raw(THIN, summary="Feed summary standing in for the article."))
+    docs = _documents(make_raw(THIN, summary="Feed summary standing in for the article."))
 
     assert docs[0].body_text == "Feed summary standing in for the article."
     assert any("fell back" in w for w in docs[0].warnings)
 
 
 def test_missing_title_is_flagged_not_fatal():
-    docs = SOURCE.parse(make_raw(ARTICLE, title=None))
+    docs = _documents(make_raw(ARTICLE, title=None))
 
     assert docs[0].title == "(untitled)"
     assert any("no title" in w for w in docs[0].warnings)

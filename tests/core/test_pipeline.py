@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from crawler.core.fetch import PermanentFetchError
-from crawler.core.models import DiscoveredItem, ParsedDoc, RawDocument
+from crawler.core.models import DiscoveredItem, ParsedDoc, ParseResult, RawDocument
 from crawler.core.pipeline import run_source
 from crawler.db import repo
 from crawler.sources.base import RateLimit
@@ -18,20 +18,22 @@ class StubSource:
     def __init__(self, urls):
         self._urls = urls
 
-    async def discover(self, since, fetcher=None):
+    async def discover(self, since, fetcher=None, mode="incremental"):
         for url in self._urls:
             yield DiscoveredItem(url=url, source=self.name)
 
     def parse(self, raw):
-        return [
-            ParsedDoc(
-                url=raw.item.url,
-                source=self.name,
-                title=f"Doc {raw.item.url}",
-                body_text=raw.content.decode(),
-                license=self.license,
+        return ParseResult(
+            documents=(
+                ParsedDoc(
+                    url=raw.item.url,
+                    source=self.name,
+                    title=f"Doc {raw.item.url}",
+                    body_text=raw.content.decode(),
+                    license=self.license,
+                ),
             )
-        ]
+        )
 
 
 class StubFetcher:
@@ -123,7 +125,7 @@ async def test_failure_in_discover_quarantines_the_source_without_aborting(db_se
     repo.ensure_source(db_session, "stub", "api", "public-domain")
 
     class ExplodingSource(StubSource):
-        async def discover(self, since, fetcher=None):
+        async def discover(self, since, fetcher=None, mode="incremental"):
             raise PermanentFetchError("404 for https://example.org/feed")
             yield  # pragma: no cover - unreachable, makes this an async generator
 

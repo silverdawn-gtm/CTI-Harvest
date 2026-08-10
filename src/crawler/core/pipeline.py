@@ -13,14 +13,21 @@ CIRCUIT_BREAKER_THRESHOLD = 5
 COMMIT_EVERY = 50
 
 
-async def run_source(source, fetcher, archive, session: Session, since: datetime) -> CrawlRun:
+async def run_source(
+    source,
+    fetcher,
+    archive,
+    session: Session,
+    since: datetime,
+    mode: str = "incremental",
+) -> CrawlRun:
     """Discover, fetch, archive, parse, and persist everything one source offers."""
     repo.ensure_source(session, source.name, source.kind, source.license)
     run = repo.start_run(session, source.name)
     session.flush()
 
     try:
-        result = await _drain(source, fetcher, archive, session, since, run)
+        result = await _drain(source, fetcher, archive, session, since, run, mode)
     except FetchError as exc:
         # Discovery itself failed — a dead feed URL, a 403 on the index. Quarantine this
         # source and let the rest of the crawl continue; only a database outage aborts
@@ -35,12 +42,14 @@ async def run_source(source, fetcher, archive, session: Session, since: datetime
     return result
 
 
-async def _drain(source, fetcher, archive, session: Session, since: datetime, run) -> CrawlRun:
+async def _drain(
+    source, fetcher, archive, session: Session, since: datetime, run, mode: str
+) -> CrawlRun:
     consecutive_failures = 0
     processed_since_commit = 0
     status = "ok"
 
-    async for item in source.discover(since, fetcher):
+    async for item in source.discover(since, fetcher, mode):
         run.discovered += 1
 
         existing = repo.get_document_by_url_hash(session, item.url_hash)
@@ -79,13 +88,20 @@ async def _drain(source, fetcher, archive, session: Session, since: datetime, ru
         run.fetched += 1
         raw_path = archive.store(raw)
 
-        for parsed in source.parse(raw):
+        result = source.parse(raw)
+
+        for parsed in result.documents:
             repo.upsert_document(session, parsed, raw, raw_path)
-            for fact in parsed.vulnerabilities:
-                repo.upsert_vulnerability(session, fact)
             for warning in parsed.warnings:
                 logger.warning("parse warning [%s] %s: %s", source.name, parsed.url, warning)
             run.parsed += 1
+
+        for fact in result.vulnerabilities:
+            repo.upsert_vulnerability(session, fact)
+            run.parsed += 1
+
+        for warning in result.warnings:
+            logger.warning("parse warning [%s]: %s", source.name, warning)
 
         processed_since_commit += 1
         if processed_since_commit >= COMMIT_EVERY:

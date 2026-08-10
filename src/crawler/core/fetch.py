@@ -73,7 +73,7 @@ class Fetcher:
         robots: RobotsCache | None = None,
     ) -> None:
         self._client = client
-        self._limiter = limiter
+        self.limiter = limiter
         self._user_agent = user_agent
         self._max_attempts = max_attempts
         self._sleep = sleep or asyncio.sleep
@@ -97,7 +97,7 @@ class Fetcher:
         last_error: Exception | None = None
 
         for attempt in range(1, self._max_attempts + 1):
-            await self._limiter.acquire(item.url)
+            await self.limiter.acquire(item.url)
             try:
                 response = await self._client.get(
                     item.url, headers=headers, follow_redirects=True

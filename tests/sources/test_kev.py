@@ -27,7 +27,7 @@ async def test_discover_yields_the_catalog_url():
 
 
 def test_parse_returns_one_doc_per_vulnerability():
-    docs = KevSource().parse(make_raw())
+    docs = KevSource().parse(make_raw()).documents
 
     assert len(docs) == 2
     assert {d.title for d in docs} == {
@@ -37,15 +37,14 @@ def test_parse_returns_one_doc_per_vulnerability():
 
 
 def test_each_doc_gets_a_unique_url():
-    docs = KevSource().parse(make_raw())
+    docs = KevSource().parse(make_raw()).documents
 
     assert docs[0].url.endswith("#CVE-2024-21412")
     assert len({d.url_hash for d in docs}) == 2
 
 
 def test_parse_emits_vulnerability_facts_with_kev_flags():
-    docs = KevSource().parse(make_raw())
-    fact = docs[0].vulnerabilities[0]
+    fact = KevSource().parse(make_raw()).vulnerabilities[0]
 
     assert fact.cve_id == "CVE-2024-21412"
     assert fact.vendor == "Microsoft"
@@ -55,7 +54,7 @@ def test_parse_emits_vulnerability_facts_with_kev_flags():
 
 
 def test_body_text_includes_description_and_required_action():
-    docs = KevSource().parse(make_raw())
+    docs = KevSource().parse(make_raw()).documents
 
     assert "bypass SmartScreen protections" in docs[0].body_text
     assert "Apply mitigations" in docs[0].body_text
@@ -72,6 +71,6 @@ def test_malformed_entry_is_skipped_with_a_warning():
         fetched_at=datetime(2026, 3, 15, tzinfo=timezone.utc),
     )
 
-    docs = KevSource().parse(raw)
+    docs = KevSource().parse(raw).documents
 
     assert len(docs) == 2  # the malformed entry produced no document

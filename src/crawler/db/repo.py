@@ -69,7 +69,15 @@ def upsert_vulnerability(session: Session, fact: VulnerabilityFact) -> None:
         session.add(vuln)
 
     # Only overwrite with values the source actually asserted.
-    for field in ("vendor", "product", "description", "published", "kev_added_date"):
+    for field in (
+        "vendor",
+        "product",
+        "description",
+        "published",
+        "kev_added_date",
+        "cvss_v3",
+        "cvss_vector",
+    ):
         value = getattr(fact, field)
         if value is not None:
             setattr(vuln, field, value)

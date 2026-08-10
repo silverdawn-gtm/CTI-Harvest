@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 import feedparser
 import trafilatura
 
-from crawler.core.models import DiscoveredItem, ParsedDoc, RawDocument
+from crawler.core.models import DiscoveredItem, ParsedDoc, ParseResult, RawDocument
 from crawler.sources.base import RateLimit, register
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,9 @@ class NewsRssSource:
         self.name = name
         self.feed_url = feed_url
 
-    async def discover(self, since: datetime, fetcher=None) -> AsyncIterator[DiscoveredItem]:
+    async def discover(
+        self, since: datetime, fetcher=None, mode: str = "incremental"
+    ) -> AsyncIterator[DiscoveredItem]:
         if fetcher is None:  # pragma: no cover - programming error, not a runtime condition
             raise ValueError(f"{self.name}: discover requires a fetcher to read the feed")
 
@@ -87,7 +89,7 @@ class NewsRssSource:
                 hint={"summary": getattr(entry, "summary", "") or ""},
             )
 
-    def parse(self, raw: RawDocument) -> list[ParsedDoc]:
+    def parse(self, raw: RawDocument) -> ParseResult:
         html = raw.content.decode("utf-8", errors="replace")
         body = trafilatura.extract(html, include_comments=False, include_tables=False) or ""
         warnings: list[str] = []
@@ -106,17 +108,19 @@ class NewsRssSource:
         if not body:
             warnings.append("no body text recovered")
 
-        return [
-            ParsedDoc(
-                url=raw.item.url,
-                source=self.name,
-                title=title,
-                body_text=body,
-                license=self.license,
-                published_at=raw.item.published_at,
-                warnings=tuple(warnings),
+        return ParseResult(
+            documents=(
+                ParsedDoc(
+                    url=raw.item.url,
+                    source=self.name,
+                    title=title,
+                    body_text=body,
+                    license=self.license,
+                    published_at=raw.item.published_at,
+                    warnings=tuple(warnings),
+                ),
             )
-        ]
+        )
 
 
 for _name, _feed in SITES:

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
 
-from crawler.core.models import DiscoveredItem, ParsedDoc, RawDocument
+from crawler.core.models import DiscoveredItem, ParseResult, RawDocument
 
 if TYPE_CHECKING:
     # Type-only: importing Fetcher at runtime would cycle back through core.ratelimit.
@@ -23,19 +23,26 @@ class Source(Protocol):
     license: str
     rate_limit: RateLimit
 
-    def discover(self, since: datetime, fetcher: "Fetcher | None" = None) -> AsyncIterator[
-        DiscoveredItem
-    ]:
+    def discover(
+        self,
+        since: datetime,
+        fetcher: "Fetcher | None" = None,
+        mode: Literal["incremental", "backfill"] = "incremental",
+    ) -> AsyncIterator[DiscoveredItem]:
         """Yield items to fetch that may have changed since `since`.
 
         Feed- and API-backed sources need `fetcher` to enumerate what exists: an RSS adapter
         must read the feed before it knows any article URLs. Sources that already know their
         URLs, like KEV, ignore it.
+
+        `mode` matters where "what changed" and "what was published" are different questions.
+        NVD backfills by publication date but runs incrementally by modification date; asking
+        the wrong one silently returns the wrong set.
         """
         ...
 
-    def parse(self, raw: RawDocument) -> list[ParsedDoc]:
-        """Pure function: bytes in, documents out. No network, no database."""
+    def parse(self, raw: RawDocument) -> ParseResult:
+        """Pure function: bytes in, typed facts out. No network, no database."""
         ...
 
 

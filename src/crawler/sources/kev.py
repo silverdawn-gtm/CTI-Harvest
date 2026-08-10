@@ -3,7 +3,13 @@ import logging
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 
-from crawler.core.models import DiscoveredItem, ParsedDoc, RawDocument, VulnerabilityFact
+from crawler.core.models import (
+    DiscoveredItem,
+    ParsedDoc,
+    ParseResult,
+    RawDocument,
+    VulnerabilityFact,
+)
 from crawler.sources.base import RateLimit, register
 
 logger = logging.getLogger(__name__)
@@ -30,12 +36,15 @@ class KevSource:
     license = "public-domain"
     rate_limit = RateLimit(requests=1, per_seconds=2.0)
 
-    async def discover(self, since: datetime, fetcher=None) -> AsyncIterator[DiscoveredItem]:
+    async def discover(
+        self, since: datetime, fetcher=None, mode: str = "incremental"
+    ) -> AsyncIterator[DiscoveredItem]:
         yield DiscoveredItem(url=self.CATALOG_URL, source=self.name)
 
-    def parse(self, raw: RawDocument) -> list[ParsedDoc]:
+    def parse(self, raw: RawDocument) -> ParseResult:
         payload = json.loads(raw.content)
         docs: list[ParsedDoc] = []
+        facts: list[VulnerabilityFact] = []
 
         for entry in payload.get("vulnerabilities", []):
             cve_id = entry.get("cveID")
@@ -64,20 +73,20 @@ class KevSource:
                     body_text=body,
                     license=self.license,
                     published_at=added,
-                    vulnerabilities=(
-                        VulnerabilityFact(
-                            cve_id=cve_id,
-                            vendor=entry.get("vendorProject"),
-                            product=entry.get("product"),
-                            description=entry.get("shortDescription"),
-                            kev_listed=True,
-                            kev_added_date=added,
-                        ),
-                    ),
+                )
+            )
+            facts.append(
+                VulnerabilityFact(
+                    cve_id=cve_id,
+                    vendor=entry.get("vendorProject"),
+                    product=entry.get("product"),
+                    description=entry.get("shortDescription"),
+                    kev_listed=True,
+                    kev_added_date=added,
                 )
             )
 
-        return docs
+        return ParseResult(documents=tuple(docs), vulnerabilities=tuple(facts))
 
 
 register(KevSource())

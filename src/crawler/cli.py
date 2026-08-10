@@ -87,6 +87,32 @@ def crawl(
 
 
 @app.command()
+def backfill(
+    since: str = typer.Option(..., help="Load history from this date, e.g. 2024-08-01."),
+    source: str | None = typer.Option(None, help="Only backfill this source."),
+) -> None:
+    """Load historical data. Queries by publication date rather than modification date."""
+    settings = get_settings()
+    start = datetime.fromisoformat(since).replace(tzinfo=timezone.utc)
+    targets = [source_registry.get_source(source)] if source else source_registry.all_sources()
+
+    async def _run() -> None:
+        fetcher = build_fetcher()
+        archive = RawArchive(settings.raw_archive_dir)
+        for target in targets:
+            with session_scope() as session:
+                run = await run_source(
+                    target, fetcher, archive, session, start, mode="backfill"
+                )
+                typer.echo(
+                    f"{target.name}: discovered={run.discovered} fetched={run.fetched} "
+                    f"parsed={run.parsed} failed={run.failed} status={run.status}"
+                )
+
+    asyncio.run(_run())
+
+
+@app.command()
 def stats() -> None:
     """Summarize what is in the database."""
     with session_scope() as session:

@@ -41,7 +41,7 @@ async def test_kev_flows_from_http_to_database(db_session, tmp_path):
     )
 
     assert run.status == "ok"
-    assert run.parsed == 2
+    assert run.parsed == 4  # 2 documents + 2 vulnerability facts
 
     docs = db_session.execute(select(Document).where(Document.source == "kev")).scalars().all()
     assert len(docs) == 2

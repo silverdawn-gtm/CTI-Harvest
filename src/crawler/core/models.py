@@ -46,6 +46,8 @@ class VulnerabilityFact:
     kev_listed: bool = False
     kev_added_date: datetime | None = None
     published: datetime | None = None
+    cvss_v3: float | None = None
+    cvss_vector: str | None = None
 
 
 @dataclass(frozen=True)
@@ -58,9 +60,22 @@ class ParsedDoc:
     body_text: str
     license: str
     published_at: datetime | None = None
-    vulnerabilities: tuple[VulnerabilityFact, ...] = ()
     warnings: tuple[str, ...] = ()
 
     @property
     def url_hash(self) -> str:
         return hashlib.sha256(self.url.encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
+class ParseResult:
+    """Everything one raw fetch yielded.
+
+    Sources differ in what they produce, not in how they produce it: a news article is one
+    document, the KEV catalog is many documents plus many CVE facts, and NVD is thousands of
+    CVE facts and no documents at all. The pipeline persists whichever collections are filled.
+    """
+
+    documents: tuple[ParsedDoc, ...] = ()
+    vulnerabilities: tuple[VulnerabilityFact, ...] = ()
+    warnings: tuple[str, ...] = ()
