@@ -1,19 +1,16 @@
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
 
-from crawler.core.models import DiscoveredItem, ParseResult, RawDocument
+from crawler.core.models import DiscoveredItem, ParseResult, RateLimit, RawDocument
 
 if TYPE_CHECKING:
     # Type-only: importing Fetcher at runtime would cycle back through core.ratelimit.
     from crawler.core.fetch import Fetcher
 
-
-@dataclass(frozen=True)
-class RateLimit:
-    requests: int
-    per_seconds: float
+# Re-exported: adapters and tests import RateLimit from here, and it reads naturally
+# alongside the Source protocol that declares it.
+__all__ = ["RateLimit", "Source", "all_sources", "get_source", "register"]
 
 
 @runtime_checkable

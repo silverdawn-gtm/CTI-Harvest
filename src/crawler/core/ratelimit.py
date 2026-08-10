@@ -3,7 +3,7 @@ import time
 from collections.abc import Awaitable, Callable
 from urllib.parse import urlparse
 
-from crawler.sources.base import RateLimit
+from crawler.core.models import RateLimit
 
 
 class DomainRateLimiter:

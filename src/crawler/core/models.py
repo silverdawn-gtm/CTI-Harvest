@@ -4,6 +4,18 @@ from datetime import datetime
 
 
 @dataclass(frozen=True)
+class RateLimit:
+    """How fast one host may be polled.
+
+    Lives here rather than in `sources.base` so that `core.ratelimit` does not have to import
+    from `sources`, which would make `sources.base` unable to reference `Fetcher` in turn.
+    """
+
+    requests: int
+    per_seconds: float
+
+
+@dataclass(frozen=True)
 class DiscoveredItem:
     """A URL a source wants fetched, plus anything the source already knows about it."""
 

@@ -28,13 +28,14 @@ SITES: list[tuple[str, str]] = [
     ("securityweek", "https://www.securityweek.com/feed/"),
     ("therecord", "https://therecord.media/feed"),
     ("talos", "https://blog.talosintelligence.com/rss/"),
-    ("unit42", "https://unit42.paloaltonetworks.com/feed/"),
     ("sentinelone", "https://www.sentinelone.com/blog/feed/"),
-    ("microsoft", "https://www.microsoft.com/en-us/security/blog/feed/"),
     ("malwarebytes", "https://www.malwarebytes.com/blog/feed/index.xml"),
     ("projectzero", "https://googleprojectzero.blogspot.com/feeds/posts/default"),
 ]
 
+# unit42 and microsoft are served by wordpress.py instead: their WordPress REST API returns
+# 100 full-text posts per request, so RSS would be both slower and shallower.
+#
 # Removed rather than worked around:
 #   darkreading  - returns 403 on every article; the publisher refuses automated clients,
 #                  and spoofing a browser User-Agent to get past that is not acceptable.
