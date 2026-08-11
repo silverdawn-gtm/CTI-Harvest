@@ -187,10 +187,11 @@ SITES = [
     SitemapSite("therecord", "https://therecord.media/sitemap.xml", "sitemaps/page-"),
     SitemapSite("talos", "https://blog.talosintelligence.com/sitemap.xml", "sitemap-posts"),
     SitemapSite("sentinelone", "https://www.sentinelone.com/sitemap.xml", "post-sitemap"),
-    SitemapSite(
-        "malwarebytes", "https://www.malwarebytes.com/sitemap_index.xml", "post-sitemap", "/blog/"
-    ),
 ]
+
+# malwarebytes is served by wordpress.py: its only post sitemap
+# (https://www.malwarebytes.com/post-sitemap.xml) times out server-side even at 60s, while
+# its WordPress API answers in half a second.
 
 for _site in SITES:
     register(SitemapSource(_site))

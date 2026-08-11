@@ -27,6 +27,9 @@ _TAGS = re.compile(r"<[^>]+>")
 SITES: list[tuple[str, str]] = [
     ("unit42", "https://unit42.paloaltonetworks.com/wp-json/wp/v2/posts"),
     ("microsoft", "https://www.microsoft.com/en-us/security/blog/wp-json/wp/v2/posts"),
+    # Note the root path, not /blog: the API lives at the domain root even though every
+    # article sits under /blog/. Probing the /blog prefix returns a 404 and reads as "no API".
+    ("malwarebytes", "https://www.malwarebytes.com/wp-json/wp/v2/posts"),
 ]
 
 
