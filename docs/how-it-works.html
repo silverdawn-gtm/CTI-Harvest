@@ -1,0 +1,981 @@
+<title>How the Threat Intelligence Crawler Works</title>
+
+<style>
+  :root {
+    --ground: #f2f5f6;
+    --surface: #ffffff;
+    --surface-sunk: #e8edee;
+    --ink: #101619;
+    --ink-soft: #3d4c51;
+    --muted: #5b6b70;
+    --rule: #d2dcde;
+    --rule-strong: #b4c3c6;
+    --accent: #16706b;
+    --accent-ink: #0d4f4b;
+    --accent-wash: #dfeceb;
+    --amber: #8a5c10;
+    --amber-wash: #f6eddc;
+    --shadow: 0 1px 2px rgba(16, 22, 25, .06), 0 8px 24px -16px rgba(16, 22, 25, .28);
+
+    --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+
+    --measure: 66ch;
+    --gutter: clamp(1.25rem, 4vw, 3rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0d1214;
+      --surface: #141c1f;
+      --surface-sunk: #101719;
+      --ink: #e7eeef;
+      --ink-soft: #c2d0d2;
+      --muted: #8ea2a6;
+      --rule: #263336;
+      --rule-strong: #35474b;
+      --accent: #5fc0b8;
+      --accent-ink: #8fd6cf;
+      --accent-wash: #14302e;
+      --amber: #d9a257;
+      --amber-wash: #2a2013;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px -18px rgba(0, 0, 0, .9);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0d1214;
+    --surface: #141c1f;
+    --surface-sunk: #101719;
+    --ink: #e7eeef;
+    --ink-soft: #c2d0d2;
+    --muted: #8ea2a6;
+    --rule: #263336;
+    --rule-strong: #35474b;
+    --accent: #5fc0b8;
+    --accent-ink: #8fd6cf;
+    --accent-wash: #14302e;
+    --amber: #d9a257;
+    --amber-wash: #2a2013;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px -18px rgba(0, 0, 0, .9);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 78rem;
+    margin: 0 auto;
+    padding: clamp(2.5rem, 6vw, 5rem) var(--gutter) 6rem;
+  }
+
+  .col { max-width: var(--measure); }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 3rem;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    line-height: 1.04;
+    letter-spacing: -.015em;
+    text-wrap: balance;
+    margin: 0;
+    max-width: 20ch;
+  }
+
+  .standfirst {
+    font-size: clamp(1.05rem, 2vw, 1.2rem);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0;
+  }
+
+  /* ---------- counters ---------- */
+
+  .counters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .counter {
+    background: var(--surface);
+    padding: 1rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+  }
+
+  .counter b {
+    font-family: var(--mono);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .counter span {
+    font-size: .78rem;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+
+  /* ---------- structure ---------- */
+
+  section { margin-top: 3.75rem; }
+
+  h2 {
+    font-family: var(--display);
+    font-size: clamp(1.55rem, 3.2vw, 2.1rem);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -.01em;
+    text-wrap: balance;
+    margin: 0 0 .35rem;
+  }
+
+  h3 {
+    font-family: var(--body);
+    font-size: 1.02rem;
+    font-weight: 650;
+    letter-spacing: -.005em;
+    margin: 2rem 0 .4rem;
+  }
+
+  .kicker {
+    font-family: var(--mono);
+    font-size: .7rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 .9rem;
+  }
+
+  p { margin: 0 0 1.1rem; max-width: var(--measure); }
+  p:last-child { margin-bottom: 0; }
+
+  strong { font-weight: 650; }
+
+  code {
+    font-family: var(--mono);
+    font-size: .86em;
+    background: var(--surface-sunk);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: .06em .34em;
+  }
+
+  ul { max-width: var(--measure); padding-left: 1.15rem; margin: 0 0 1.1rem; }
+  li { margin-bottom: .5rem; }
+  li::marker { color: var(--accent); }
+
+  /* ---------- pipeline stages ---------- */
+
+  .stages {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 1.75rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .stage {
+    display: grid;
+    grid-template-columns: 3.4rem 1fr;
+    gap: 1.25rem;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .stage-num {
+    font-family: var(--mono);
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--accent);
+    padding-top: .28rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stage h3 { margin: 0 0 .4rem; font-size: 1.08rem; }
+  .stage p { margin-bottom: .7rem; }
+  .stage p:last-child { margin-bottom: 0; }
+
+  /* ---------- figures ---------- */
+
+  figure {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+
+  figure svg {
+    display: block;
+    width: 100%;
+    min-width: 30rem;
+    max-width: 100%;
+    height: auto;
+    color: var(--ink-soft);
+  }
+
+  figcaption {
+    margin-top: 1.1rem;
+    padding-top: .9rem;
+    border-top: 1px solid var(--rule);
+    font-size: .84rem;
+    color: var(--muted);
+    max-width: 62ch;
+  }
+
+  .svg-accent { color: var(--accent); }
+
+  /* ---------- tables ---------- */
+
+  .table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 32rem;
+    font-size: .9rem;
+  }
+
+  th, td {
+    text-align: left;
+    padding: .6rem .8rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+
+  th {
+    font-family: var(--mono);
+    font-size: .7rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--rule-strong);
+    white-space: nowrap;
+  }
+
+  td.num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  .route {
+    font-family: var(--mono);
+    font-size: .72rem;
+    padding: .1rem .45rem;
+    border-radius: 999px;
+    background: var(--accent-wash);
+    color: var(--accent-ink);
+    white-space: nowrap;
+  }
+
+  .route.thin {
+    background: var(--surface-sunk);
+    color: var(--muted);
+  }
+
+  /* ---------- callouts ---------- */
+
+  .note {
+    margin: 1.75rem 0;
+    padding: 1.1rem 1.3rem;
+    background: var(--amber-wash);
+    border-left: 3px solid var(--amber);
+    border-radius: 0 3px 3px 0;
+    max-width: var(--measure);
+  }
+
+  .note p { margin-bottom: .6rem; }
+  .note p:last-child { margin-bottom: 0; }
+
+  .note .label {
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--amber);
+    display: block;
+    margin-bottom: .35rem;
+  }
+
+  /* ---------- terminal ---------- */
+
+  .term {
+    font-family: var(--mono);
+    font-size: .82rem;
+    line-height: 1.7;
+    background: var(--surface-sunk);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1rem 1.15rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    color: var(--ink-soft);
+    white-space: pre;
+  }
+
+  .term .cmd { color: var(--accent); }
+
+  footer {
+    margin-top: 4.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    font-size: .84rem;
+    color: var(--muted);
+    max-width: var(--measure);
+  }
+
+  a { color: var(--accent-ink); text-underline-offset: .18em; }
+  a:focus-visible, :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">Project Crawler &middot; How it works</p>
+    <h1>A machine that reads the security news so you don't have to</h1>
+    <p class="standfirst">
+      This crawler visits security websites and public vulnerability catalogs, saves what it
+      finds, and files it into a database you can query. Here is the whole thing explained
+      plainly &mdash; what it collects, how it collects it, and the rules it follows to stay
+      welcome on other people's servers.
+    </p>
+    <div class="counters">
+      <div class="counter"><b>11,108</b><span>articles collected</span></div>
+      <div class="counter"><b>116,901</b><span>vulnerability records</span></div>
+      <div class="counter"><b>50.8M</b><span>characters of text</span></div>
+      <div class="counter"><b>11</b><span>sources</span></div>
+      <div class="counter"><b>2 yrs</b><span>of history</span></div>
+    </div>
+  </header>
+
+  <section>
+    <p class="kicker">The short version</p>
+    <h2>What it actually does</h2>
+    <div class="col">
+      <p>
+        Think of it as a very patient research assistant. Every time you run it, it goes to a
+        list of websites, asks each one &ldquo;what's new since last time?&rdquo;, downloads
+        whatever it hasn't seen before, pulls the actual article text out of the surrounding
+        clutter of menus and adverts, and stores it in a database along with the date, the
+        source, and the web address it came from.
+      </p>
+      <p>
+        Alongside the articles it collects <strong>vulnerabilities</strong> &mdash; the
+        officially catalogued security flaws that get a <code>CVE</code> number, like
+        <code>CVE-2024-21412</code>. Those come from two government-run sources and arrive as
+        structured data rather than prose: a severity score, a description, the affected
+        product, the date it was published.
+      </p>
+      <p>
+        The end result is a single searchable pile of recent cybersecurity history: what was
+        attacked, how, and which flaws were involved. That pile is the raw material for
+        training a prediction model later.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The one idea that shapes everything</p>
+    <h2>Two halves that aren't allowed to talk to each other</h2>
+    <div class="col">
+      <p>
+        Almost every design decision comes from one rule: <strong>the part that knows about
+        websites and the part that knows about the database are kept completely
+        separate.</strong>
+      </p>
+      <p>
+        A <em>source adapter</em> is a small piece of code that understands one website. It
+        knows the address of BleepingComputer's news feed, or how to read Microsoft's blog
+        index. What it deliberately cannot do is write to the database &mdash; it has no
+        access at all. It takes in raw downloaded bytes and hands back plain, typed
+        descriptions of what it found.
+      </p>
+      <p>
+        The <em>pipeline</em> is the opposite: it knows everything about saving and nothing
+        about any particular website. It takes those descriptions and writes them to Postgres.
+      </p>
+      <p>
+        The payoff is practical. Adding a new website means writing one small adapter and
+        never reading a line of the saving logic. And because an adapter is just
+        &ldquo;bytes in, facts out&rdquo; with no network and no database involved, it can be
+        tested against a saved copy of a real page in a few milliseconds. The whole test suite
+        touches the internet exactly zero times.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The journey of one article</p>
+    <h2>Five stages, every single time</h2>
+    <div class="col">
+      <p>
+        Everything the crawler collects travels the same five steps, whether it's a news story
+        or a batch of two thousand vulnerability records.
+      </p>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 900 300" role="img"
+           aria-label="Flow diagram: discover produces URLs, fetch downloads bytes through a politeness gate, archive writes gzipped copies to disk, parse turns bytes into typed facts, and persist writes rows to Postgres. Items already seen stop after the fetch stage.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <text x="90" y="30" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75"
+              font-family="ui-monospace, monospace">asks each site what exists</text>
+        <text x="438" y="30" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75"
+              font-family="ui-monospace, monospace">robots.txt &middot; 1 request per 2s per site &middot; retry on failure</text>
+
+        <line x1="264" y1="38" x2="264" y2="66" stroke="currentColor" stroke-width="1"
+              opacity=".35" stroke-dasharray="3 3"/>
+
+        <g font-family="ui-sans-serif, system-ui, sans-serif">
+          <rect x="15" y="70" width="150" height="62" rx="3" fill="none"
+                stroke="currentColor" stroke-width="1.5"/>
+          <text x="90" y="98" text-anchor="middle" font-size="13" font-weight="600"
+                fill="currentColor">DISCOVER</text>
+          <text x="90" y="116" text-anchor="middle" font-size="11" fill="currentColor"
+                opacity=".7">find addresses</text>
+
+          <rect x="189" y="70" width="150" height="62" rx="3" fill="none"
+                stroke="currentColor" stroke-width="1.5"/>
+          <text x="264" y="98" text-anchor="middle" font-size="13" font-weight="600"
+                fill="currentColor">FETCH</text>
+          <text x="264" y="116" text-anchor="middle" font-size="11" fill="currentColor"
+                opacity=".7">download politely</text>
+
+          <rect x="363" y="70" width="150" height="62" rx="3" fill="none"
+                stroke="currentColor" stroke-width="1.5"/>
+          <text x="438" y="98" text-anchor="middle" font-size="13" font-weight="600"
+                fill="currentColor">ARCHIVE</text>
+          <text x="438" y="116" text-anchor="middle" font-size="11" fill="currentColor"
+                opacity=".7">keep the original</text>
+
+          <rect x="537" y="70" width="150" height="62" rx="3" fill="none"
+                stroke="currentColor" stroke-width="1.5"/>
+          <text x="612" y="98" text-anchor="middle" font-size="13" font-weight="600"
+                fill="currentColor">PARSE</text>
+          <text x="612" y="116" text-anchor="middle" font-size="11" fill="currentColor"
+                opacity=".7">pull out the facts</text>
+
+          <rect x="711" y="70" width="150" height="62" rx="3" fill="none"
+                stroke="currentColor" stroke-width="1.5"/>
+          <text x="786" y="98" text-anchor="middle" font-size="13" font-weight="600"
+                fill="currentColor">PERSIST</text>
+          <text x="786" y="116" text-anchor="middle" font-size="11" fill="currentColor"
+                opacity=".7">save to database</text>
+        </g>
+
+        <g stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)">
+          <line x1="165" y1="101" x2="187" y2="101"/>
+          <line x1="339" y1="101" x2="361" y2="101"/>
+          <line x1="513" y1="101" x2="535" y2="101"/>
+          <line x1="687" y1="101" x2="709" y2="101"/>
+        </g>
+
+        <g font-family="ui-monospace, monospace" font-size="10" fill="currentColor" opacity=".8"
+           text-anchor="middle">
+          <text x="176" y="62">urls</text>
+          <text x="350" y="62">bytes</text>
+          <text x="524" y="62">bytes</text>
+          <text x="698" y="62">facts</text>
+        </g>
+
+        <g stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)">
+          <line x1="438" y1="134" x2="438" y2="186"/>
+          <line x1="786" y1="134" x2="786" y2="186"/>
+        </g>
+
+        <g fill="none" stroke="currentColor" stroke-width="1.5">
+          <ellipse cx="438" cy="198" rx="52" ry="11"/>
+          <path d="M386 198 V228 A52 11 0 0 0 490 228 V198"/>
+          <ellipse cx="786" cy="198" rx="52" ry="11"/>
+          <path d="M734 198 V228 A52 11 0 0 0 838 228 V198"/>
+        </g>
+        <text x="438" y="222" text-anchor="middle" font-size="11" fill="currentColor"
+              font-family="ui-sans-serif, system-ui, sans-serif">disk</text>
+        <text x="786" y="222" text-anchor="middle" font-size="11" fill="currentColor"
+              font-family="ui-sans-serif, system-ui, sans-serif">Postgres</text>
+        <text x="438" y="256" text-anchor="middle" font-size="10" fill="currentColor"
+              opacity=".7" font-family="ui-monospace, monospace">gzipped copy of the page</text>
+        <text x="786" y="256" text-anchor="middle" font-size="10" fill="currentColor"
+              opacity=".7" font-family="ui-monospace, monospace">rows you can query</text>
+
+        <g class="svg-accent">
+          <line x1="264" y1="134" x2="264" y2="228" stroke="currentColor" stroke-width="1.5"
+                stroke-dasharray="5 4" marker-end="url(#ar)"/>
+          <text x="264" y="252" text-anchor="middle" font-size="11" fill="currentColor"
+                font-family="ui-sans-serif, system-ui, sans-serif">already have it &rarr; stop</text>
+          <text x="264" y="270" text-anchor="middle" font-size="10" fill="currentColor"
+                opacity=".85" font-family="ui-monospace, monospace">saves the other three stages</text>
+        </g>
+      </svg>
+      <figcaption>
+        The path every item takes. The dashed branch is the one that does most of the work in
+        practice &mdash; on a repeat run, nearly everything stops there.
+      </figcaption>
+    </figure>
+
+    <div class="stages">
+      <div class="stage">
+        <div class="stage-num">01</div>
+        <div>
+          <h3>Discover &mdash; what's out there?</h3>
+          <p>
+            The adapter produces a list of web addresses worth looking at. For a news site it
+            reads the site's feed. For the government vulnerability database it works out how
+            many pages of results exist and lists them all.
+          </p>
+          <p>
+            This stage filters by date <em>before</em> downloading anything. If you ask for the
+            last two years, articles older than that are dropped here &mdash; so the crawler
+            never pays to download something it was going to throw away.
+          </p>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-num">02</div>
+        <div>
+          <h3>Fetch &mdash; download it, politely</h3>
+          <p>
+            Each address is downloaded one at a time, with a deliberate pause between requests
+            to the same website. This is the stage with all the manners in it, described in
+            its own section below.
+          </p>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-num">03</div>
+        <div>
+          <h3>Archive &mdash; keep the original forever</h3>
+          <p>
+            Before anything is interpreted, the exact bytes that came back are compressed and
+            written to disk, filed by source and date.
+          </p>
+          <p>
+            This is insurance, and it is worth more than it looks. The code that extracts
+            article text from a page will get things wrong, and improving it later would
+            normally mean re-visiting thousands of pages. Because the originals are on disk,
+            that improvement can be re-run locally in minutes instead &mdash; no network, no
+            waiting, no burden on anyone's server.
+          </p>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-num">04</div>
+        <div>
+          <h3>Parse &mdash; pull the facts out of the page</h3>
+          <p>
+            A downloaded web page is mostly not the article: it's navigation, related links,
+            cookie banners, and adverts. This stage strips all that away and keeps the
+            sentences a human would actually read, plus the title and publication date.
+          </p>
+          <p>
+            When extraction returns suspiciously little text, that's recorded as a warning
+            rather than quietly saved. A page that yields 120 characters is almost always a
+            failure, not a very short article &mdash; and a corpus quietly filling up with
+            empty pages is far worse than one that complains.
+          </p>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-num">05</div>
+        <div>
+          <h3>Persist &mdash; write it down</h3>
+          <p>
+            The facts become rows in Postgres. Articles go in one table, vulnerabilities in
+            another. Writing happens in batches as the crawl proceeds, so a run that dies
+            three hours in keeps everything it had already collected.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Sources</p>
+    <h2>Four different doors into the same kind of building</h2>
+    <div class="col">
+      <p>
+        Every publisher offers a different way in, and the choice matters enormously &mdash;
+        not just for speed, but for how far back you can reach.
+      </p>
+      <p>
+        A <strong>news feed</strong> is the obvious door, and the worst one for history: a feed
+        holds only the most recent handful of articles, usually a few weeks' worth. No amount
+        of patience gets you last year through a feed, because last year simply isn't in it.
+      </p>
+      <p>
+        A <strong>sitemap</strong> is the index at the back of the book &mdash; a machine-readable
+        list of every page the site has ever published. It reaches all the way back, but you
+        still have to fetch each article individually.
+      </p>
+      <p>
+        Some sites expose a <strong>content API</strong>, which hands over a hundred complete
+        articles in a single response. Where one exists it is dramatically better for everyone:
+        fewer requests for the publisher to serve, and less work for us.
+      </p>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 900 250" role="img"
+           aria-label="Comparison of three ways into a publisher: a news feed costs one request but returns only recent articles; a sitemap reaches the full archive at one request per article; a content API returns one hundred articles per request.">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <g font-family="ui-monospace, monospace" font-size="10" fill="currentColor"
+           opacity=".65" text-transform="uppercase">
+          <text x="16" y="24">THE DOOR</text>
+          <text x="330" y="24">WHAT IT COSTS</text>
+          <text x="640" y="24">WHAT YOU GET</text>
+        </g>
+        <line x1="16" y1="34" x2="884" y2="34" stroke="currentColor" stroke-width="1" opacity=".25"/>
+
+        <g font-family="ui-sans-serif, system-ui, sans-serif">
+          <text x="16" y="72" font-size="14" font-weight="600" fill="currentColor">News feed</text>
+          <text x="16" y="92" font-size="11" fill="currentColor" opacity=".7">unit42 via RSS</text>
+          <line x1="200" y1="76" x2="600" y2="76" stroke="currentColor" stroke-width="1.5"
+                marker-end="url(#ar2)"/>
+          <text x="330" y="68" font-size="12" fill="currentColor">1 request</text>
+          <text x="640" y="72" font-size="14" font-weight="600" fill="currentColor">15 articles</text>
+          <text x="640" y="92" font-size="11" fill="currentColor" opacity=".7">last few weeks only</text>
+
+          <line x1="16" y1="118" x2="884" y2="118" stroke="currentColor" stroke-width="1" opacity=".18"/>
+
+          <text x="16" y="152" font-size="14" font-weight="600" fill="currentColor">Sitemap</text>
+          <text x="16" y="172" font-size="11" fill="currentColor" opacity=".7">thehackernews</text>
+          <line x1="200" y1="156" x2="600" y2="156" stroke="currentColor" stroke-width="1.5"
+                marker-end="url(#ar2)"/>
+          <text x="330" y="148" font-size="12" fill="currentColor">3,845 requests</text>
+          <text x="640" y="152" font-size="14" font-weight="600" fill="currentColor">3,844 articles</text>
+          <text x="640" y="172" font-size="11" fill="currentColor" opacity=".7">the full two years</text>
+
+          <line x1="16" y1="198" x2="884" y2="198" stroke="currentColor" stroke-width="1" opacity=".18"/>
+        </g>
+
+        <g class="svg-accent" font-family="ui-sans-serif, system-ui, sans-serif">
+          <text x="16" y="232" font-size="14" font-weight="600" fill="currentColor">Content API</text>
+          <text x="200" y="232" font-size="11" fill="currentColor" opacity=".8">unit42 again</text>
+          <line x1="290" y1="228" x2="600" y2="228" stroke="currentColor" stroke-width="2"
+                marker-end="url(#ar2)"/>
+          <text x="330" y="220" font-size="12" fill="currentColor" font-weight="600">3 requests</text>
+          <text x="640" y="232" font-size="14" font-weight="600" fill="currentColor">247 articles</text>
+        </g>
+      </svg>
+      <figcaption>
+        The same publisher, reached three ways. The feed and the API differ by a factor of
+        sixteen in articles returned &mdash; and the API asked for eighty times less than the
+        sitemap route would have.
+      </figcaption>
+    </figure>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Door used</th>
+            <th class="num">Articles</th>
+            <th>Why that door</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>thehackernews</td><td><span class="route">sitemap</span></td><td class="num">3,844</td><td>No API available</td></tr>
+          <tr><td>therecord</td><td><span class="route">sitemap</span></td><td class="num">2,933</td><td>No API available</td></tr>
+          <tr><td>kev</td><td><span class="route">JSON file</span></td><td class="num">1,662</td><td>Whole catalog is one file</td></tr>
+          <tr><td>malwarebytes</td><td><span class="route">content API</span></td><td class="num">1,034</td><td>Their sitemap times out</td></tr>
+          <tr><td>talos</td><td><span class="route">sitemap</span></td><td class="num">425</td><td>No API available</td></tr>
+          <tr><td>sentinelone</td><td><span class="route">sitemap</span></td><td class="num">417</td><td>API blocked</td></tr>
+          <tr><td>microsoft</td><td><span class="route">content API</span></td><td class="num">363</td><td>Fastest and lightest</td></tr>
+          <tr><td>unit42</td><td><span class="route">content API</span></td><td class="num">246</td><td>Fastest and lightest</td></tr>
+          <tr><td>krebsonsecurity</td><td><span class="route">sitemap</span></td><td class="num">159</td><td>API blocked</td></tr>
+          <tr><td>bleepingcomputer</td><td><span class="route thin">news feed</span></td><td class="num">15</td><td>No usable sitemap</td></tr>
+          <tr><td>securityweek</td><td><span class="route thin">news feed</span></td><td class="num">10</td><td>Everything else blocked</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col">
+      <p>
+        The two sources at the bottom are shallow for a reason, and it isn't laziness &mdash;
+        BleepingComputer publishes its sitemaps in a compressed text format tangled up with
+        forum threads, and SecurityWeek refuses automated access to both its sitemap and its
+        API. They contribute 25 articles out of 11,108.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Manners</p>
+    <h2>How it avoids being a nuisance</h2>
+    <div class="col">
+      <p>
+        The crawler is a guest on servers that other people pay for. Five rules keep it a
+        welcome one.
+      </p>
+      <ul>
+        <li>
+          <strong>It reads the house rules first.</strong> Websites publish a
+          <code>robots.txt</code> file saying which parts automated visitors may touch. The
+          crawler fetches it once per site, remembers it, and won't request a forbidden
+          address. A missing file means &ldquo;no restrictions&rdquo; &mdash; treating it as
+          &ldquo;forbid everything&rdquo; would stop the crawler on most of the internet.
+        </li>
+        <li>
+          <strong>It waits between requests.</strong> One request every two seconds to any
+          single website, tracked separately per site. Being slow with one publisher never
+          slows down another.
+        </li>
+        <li>
+          <strong>It says who it is.</strong> Every request carries a name and a contact
+          address, so an administrator seeing it in their logs can find out what it is.
+        </li>
+        <li>
+          <strong>It backs off when asked.</strong> If a server replies &ldquo;too many
+          requests, wait seven seconds&rdquo;, it waits exactly seven seconds. Temporary
+          failures are retried up to four times with growing gaps; a permanent
+          &ldquo;gone&rdquo; is never retried at all.
+        </li>
+        <li>
+          <strong>It gives up when told no.</strong> After five refusals in a row from one
+          site, that site is set aside for the rest of the run.
+        </li>
+      </ul>
+    </div>
+
+    <div class="note">
+      <span class="label">A real example</span>
+      <p>
+        Dark Reading was on the original list. Every article request came back
+        <code>403 Forbidden</code> &mdash; their servers deliberately refuse automated
+        visitors. After five refusals the crawler set the site aside, exactly as designed.
+      </p>
+      <p>
+        It would have been easy to disguise the crawler as a web browser and carry on. That
+        option was rejected: the publisher had made a clear decision, and working around it
+        isn't a technical question. Dark Reading was removed from the list instead.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Efficiency</p>
+    <h2>Never doing the same work twice</h2>
+    <div class="col">
+      <p>
+        A crawler you can run daily has to be cheap to re-run. Three mechanisms make the
+        second run almost free.
+      </p>
+
+      <h3>A fingerprint for every address</h3>
+      <p>
+        Each web address gets a short fingerprint, and the database refuses to store the same
+        one twice. Feeds re-advertise the same articles for weeks; this makes re-running
+        harmless rather than duplicating.
+      </p>
+
+      <h3>Asking &ldquo;has this changed?&rdquo; instead of downloading</h3>
+      <p>
+        When something is fetched, the server usually hands over a version tag. Next time, the
+        crawler sends that tag back and asks whether anything has changed. If not, the server
+        replies with a tiny <em>nothing new</em> instead of the whole page &mdash; cheaper for
+        both sides.
+      </p>
+
+      <h3>A fingerprint for the content itself</h3>
+      <p>
+        The downloaded bytes get their own fingerprint. If it matches something already stored,
+        the crawler skips extracting and saving entirely. This is what makes re-running a
+        source that publishes one enormous file &mdash; like the government's exploited
+        vulnerabilities catalog &mdash; cost one request instead of rebuilding 1,662 records.
+      </p>
+    </div>
+
+    <div class="term"><span class="cmd">$ crawler crawl --source kev</span>      <em>first run</em>
+kev: discovered=1 fetched=1 parsed=1662 failed=0 status=ok
+
+<span class="cmd">$ crawler crawl --source kev</span>      <em>second run, unchanged</em>
+kev: discovered=1 fetched=0 parsed=0 failed=0 status=ok</div>
+  </section>
+
+  <section>
+    <p class="kicker">Failure</p>
+    <h2>What happens when things go wrong</h2>
+    <div class="col">
+      <p>
+        Things go wrong constantly &mdash; sites move, feeds die, servers hiccup. The crawler
+        contains failures at three levels, so a small problem stays small.
+      </p>
+      <ul>
+        <li>
+          <strong>One bad page</strong> is written to an error log and skipped. The run
+          continues.
+        </li>
+        <li>
+          <strong>One bad site</strong> is set aside for the rest of the run, and the other ten
+          carry on untouched.
+        </li>
+        <li>
+          <strong>Only the database going down</strong> stops everything &mdash; because at
+          that point there is nowhere to put anything.
+        </li>
+      </ul>
+    </div>
+
+    <div class="note">
+      <span class="label">A bug this rule caught</span>
+      <p>
+        The isolation originally had a hole. Failures were caught while downloading
+        <em>articles</em>, but not while a source was working out <em>which</em> articles
+        existed. Google's threat blog had quietly retired its feed, so that lookup failed
+        &mdash; and the error escaped and killed the entire run. Four sites that hadn't had
+        their turn yet collected nothing at all, and the log gave no hint that they'd been
+        skipped.
+      </p>
+      <p>
+        The fix was to wrap the discovery step in the same protection as the download step. The
+        site is now set aside and the crawl carries on.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Afterwards</p>
+    <h2>Cleaning, and getting the data out</h2>
+    <div class="col">
+      <p>
+        Sitemaps list more than articles. They also list author profiles, tag listings, and the
+        homepage &mdash; pages that extract to a few hundred characters of menu text. A
+        separate cleaning step removes them, along with any duplicated article text, and fills
+        in publication dates that can be recovered from the address itself.
+      </p>
+      <p>
+        Cleaning shows you what it would delete before deleting anything. Across two passes it
+        removed 359 documents, mostly The Record's author pages.
+      </p>
+    </div>
+
+    <div class="note">
+      <span class="label">Nearly a disaster</span>
+      <p>
+        The first attempt at finding duplicates grouped articles by the fingerprint of the
+        <em>downloaded file</em>. That looked like it had found 603 duplicates. It hadn't: when
+        one response contains a hundred articles, all hundred inherit that one file's
+        fingerprint by design. Deleting them would have destroyed 603 perfectly good articles.
+      </p>
+      <p>
+        The rule now compares the fingerprint of each <em>article's own text</em>, which finds
+        15 genuine duplicates. The lesson is a general one &mdash; a number that looks alarming
+        is worth confirming before acting on it.
+      </p>
+    </div>
+
+    <div class="col">
+      <p>
+        Finally, the whole corpus can be written out as files. Parquet is compact and typed,
+        so dates arrive as real dates; JSONL is one plain record per line for anything that
+        prefers text. Every article carries its licence, so the freely redistributable material
+        can be separated from the copyrighted news in a single filter.
+      </p>
+    </div>
+
+    <div class="term"><span class="cmd">$ crawler export --format parquet</span>
+documents          11108 rows      20.7 MB  data/export/documents.parquet
+vulnerabilities   116901 rows      16.3 MB  data/export/vulnerabilities.parquet</div>
+  </section>
+
+  <section>
+    <p class="kicker">Running it</p>
+    <h2>The commands</h2>
+    <div class="term"><span class="cmd">crawler db ping</span>          check the database is reachable
+<span class="cmd">crawler sources list</span>     show every site it knows about
+<span class="cmd">crawler crawl</span>            fetch what's new since last time
+<span class="cmd">crawler backfill --since 2024-08-10</span>
+                        reach back into the archives
+<span class="cmd">crawler clean</span>            preview the junk (add --apply to remove)
+<span class="cmd">crawler export --format parquet</span>
+                        write the corpus to disk
+<span class="cmd">crawler stats</span>            how much of what is stored</div>
+    <div class="col">
+      <p>
+        <code>crawl</code> is the everyday one and is safe to run as often as you like &mdash;
+        anything already collected is skipped. <code>backfill</code> is the one that reaches
+        into history, and it asks a genuinely different question: <em>what was published in
+        this period</em>, rather than <em>what has changed recently</em>. Those return different
+        sets, which is why they're separate commands.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    Project Crawler &mdash; a cyber threat intelligence collector built on Python, PostgreSQL,
+    and a lot of other people's generously public data. Current corpus: 11,108 articles and
+    116,901 vulnerability records spanning August 2024 to August 2026.
+  </footer>
+
+</div>
