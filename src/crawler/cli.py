@@ -1,6 +1,7 @@
 import asyncio
 import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import httpx
 import typer
@@ -226,6 +227,35 @@ def clean(
         typer.secho(
             f"Deleted {len(doomed)} documents, dated {len(datable)}.", fg=typer.colors.GREEN
         )
+
+
+@app.command()
+def export(
+    fmt: str = typer.Option("jsonl", "--format", help="jsonl or parquet."),
+    out: str = typer.Option("data/export", "--out", help="Output directory."),
+) -> None:
+    """Write the corpus to disk: documents.* and vulnerabilities.*."""
+    from crawler import export as exporter
+
+    if fmt not in ("jsonl", "parquet"):
+        typer.secho(f"Unknown format {fmt!r}; expected jsonl or parquet.", fg=typer.colors.RED)
+        raise typer.Exit(code=2)
+
+    out_dir = Path(out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    with session_scope() as session:
+        for name, rows in (
+            ("documents", exporter.document_rows(session)),
+            ("vulnerabilities", exporter.vulnerability_rows(session)),
+        ):
+            path = out_dir / f"{name}.{fmt}"
+            if fmt == "jsonl":
+                written = exporter.write_jsonl(rows, path)
+            else:
+                written = exporter.write_parquet(rows, path, name)
+            size = path.stat().st_size / 1_048_576
+            typer.echo(f"{name:<16}{written:>8} rows  {size:>8.1f} MB  {path}")
 
 
 @app.command()
