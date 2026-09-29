@@ -110,3 +110,88 @@ def test_get_llm_extractor_builds_mistral_without_calling_the_api(monkeypatch):
         assert isinstance(get_llm_extractor("mistral"), SchemaLLMExtractor)
     finally:
         get_llm_extractor.cache_clear()
+
+
+def test_get_llm_extractor_builds_grok_without_calling_the_api(monkeypatch):
+    from extractors.llm import SchemaLLMExtractor
+    from pipeline import get_llm_extractor
+    monkeypatch.setenv("GROK_API_KEY", "test-key")
+    get_llm_extractor.cache_clear()
+    try:
+        assert isinstance(get_llm_extractor("grok"), SchemaLLMExtractor)
+    finally:
+        get_llm_extractor.cache_clear()
+
+
+# --- parallel LLM calls -----------------------------------------------------------------
+import threading
+import time
+
+
+class ConcurrencyLLM:
+    """Records how many calls run at once; optional per-sentence delay and failure."""
+
+    def __init__(self, delays=None, fail_on=None, barrier=None):
+        self.delays, self.fail_on, self.barrier = delays or {}, fail_on, barrier
+        self.active = self.peak = 0
+        self.lock = threading.Lock()
+
+    def extract(self, sentence, entity_types, relation_types=None, known=()):
+        with self.lock:
+            self.active += 1
+            self.peak = max(self.peak, self.active)
+        try:
+            if self.barrier:
+                self.barrier.wait()  # only passes if the calls really overlap
+            time.sleep(self.delays.get(sentence.split()[0], 0))
+            if self.fail_on and self.fail_on in sentence:
+                raise RuntimeError("503 overloaded")
+            return [("X-Agent", "Malware")], []
+        finally:
+            with self.lock:
+                self.active -= 1
+
+
+TWO = "APT28 used X-Agent. Lazarus used X-Agent."
+
+
+def test_llm_calls_for_different_sentences_overlap():
+    llm = ConcurrencyLLM(barrier=threading.Barrier(2, timeout=5))
+    records, warnings = extract_records(TWO, llm, MATCHER, EVERYTHING, parallel=2)
+    assert warnings == []
+    assert all(("X-Agent", "Malware") in [(e[2], e[3]) for e in r["entities"]] for r in records)
+
+
+def test_results_keep_sentence_order_when_calls_finish_out_of_order():
+    llm = ConcurrencyLLM(delays={"APT28": 0.3})  # the first sentence finishes last
+    records, _ = extract_records(TWO, llm, MATCHER, EVERYTHING, parallel=2)
+    assert [r["text"].split()[0] for r in records] == ["APT28", "Lazarus"]
+
+
+def test_a_failed_sentence_only_affects_itself():
+    llm = ConcurrencyLLM(fail_on="Lazarus")
+    records, warnings = extract_records(TWO, llm, MATCHER, EVERYTHING, parallel=2)
+    assert len(warnings) == 1 and warnings[0].startswith("sentence 2:") and "503 overloaded" in warnings[0]
+    assert ("X-Agent", "Malware") in [(e[2], e[3]) for e in records[0]["entities"]]
+    assert ("X-Agent", "Malware") not in [(e[2], e[3]) for e in records[1]["entities"]]
+
+
+def test_parallel_one_runs_calls_one_at_a_time():
+    llm = ConcurrencyLLM(delays={"APT28": 0.05, "Lazarus": 0.05})
+    extract_records(TWO, llm, MATCHER, EVERYTHING, parallel=1)
+    assert llm.peak == 1
+
+
+def test_parallelism_comes_from_llm_parallel_setting(monkeypatch):
+    monkeypatch.setenv("LLM_PARALLEL", "1")
+    llm = ConcurrencyLLM(delays={"APT28": 0.05, "Lazarus": 0.05})
+    extract_records(TWO, llm, MATCHER, EVERYTHING)
+    assert llm.peak == 1
+
+
+def test_default_parallelism_is_four(monkeypatch):
+    monkeypatch.delenv("LLM_PARALLEL", raising=False)
+    text = " ".join(f"APT28 used X-Agent {n}." for n in range(4))
+    llm = ConcurrencyLLM(barrier=threading.Barrier(4, timeout=5))  # passes only with 4 calls in flight
+    records, warnings = extract_records(text, llm, MATCHER, EVERYTHING)
+    assert warnings == [] and len(records) == 4 and llm.peak == 4

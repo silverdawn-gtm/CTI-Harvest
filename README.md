@@ -11,7 +11,7 @@ The output uses the record format of the DNRTI joint-extraction dataset (`dnrti-
 
 Extraction is **hybrid**:
 - **Regex patterns and MITRE ATT&CK dictionaries** find the entities with a predictable shape: hashes, IPs, domains, URLs, CVEs, technique IDs, dates, known groups, malware, tools and countries.
-- **An LLM** (Mistral or Gemini) finds everything else, plus all relations.
+- **An LLM** (Mistral, Gemini or xAI Grok) finds everything else, plus all relations. The calls for different sentences run in parallel.
 - **A validator** throws away any relation the schema does not allow, so the LLM cannot invent relation types.
 
 ---
@@ -37,16 +37,16 @@ Extraction is **hybrid**:
 
 ## 1. Quick start
 
-**You need:** Python 3.11 or newer, git, and an API key for **Mistral** or **Gemini**. Both have free tiers (see [Configuration](#2-configuration)).
+**You need:** Python 3.11 or newer, git, and an API key for **Mistral**, **Gemini** or **xAI Grok**. Mistral and Gemini have free tiers (see [Configuration](#2-configuration)).
 
 ### Clone
 
 ```bash
-git clone <repository-url> text-extractor
+git clone https://github.com/silverdawn-gtm/Extractor.git text-extractor
 cd text-extractor
 ```
 
-> Replace `<repository-url>` with the address of the repository you cloned from (GitHub, GitLab, a network share, or a local path such as `C:\Project\text-extractor`).
+> The repository is **private**: you need to be signed in to a GitHub account that has access. Git will ask you to sign in, or use an SSH key or personal access token.
 
 ### Create a virtual environment and install
 
@@ -76,7 +76,7 @@ Copy the example settings file and put your key in it:
 cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
 ```
 
-Open `.env` and set `MISTRAL_API_KEY` (or `GEMINI_API_KEY` together with `LLM_PROVIDER=gemini`). `.env` is git-ignored, so your keys are never committed.
+Open `.env` and set `MISTRAL_API_KEY`. To use another provider, set `GEMINI_API_KEY` with `LLM_PROVIDER=gemini`, or `GROK_API_KEY` with `LLM_PROVIDER=grok`. `.env` is git-ignored, so your keys are never committed.
 
 ### Run
 
@@ -106,19 +106,25 @@ All settings live in `.env`, in the project folder. `.env.example` lists them al
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `LLM_PROVIDER` | `mistral` | Which LLM to use: `mistral` or `gemini`. |
+| `LLM_PROVIDER` | `mistral` | Which LLM to use: `mistral`, `gemini` or `grok`. |
+| `LLM_PARALLEL` | `4` | How many sentences are sent to the LLM at the same time. `1` sends them one after another. |
 | `MISTRAL_API_KEY` | – | Key from https://console.mistral.ai |
 | `MISTRAL_MODEL` | `ministral-14b-latest` | First model to try. |
 | `MISTRAL_FALLBACK_MODELS` | – | Comma-separated models to try if the first is rate-limited or unavailable, e.g. `ministral-8b-latest`. |
 | `GEMINI_API_KEY` | – | Key from https://aistudio.google.com/apikey |
 | `GEMINI_MODEL` | `gemini-3.8-flash` | First model to try. |
 | `GEMINI_FALLBACK_MODELS` | – | e.g. `gemini-3.6-flash,gemini-2.5-flash` |
+| `GROK_API_KEY` | – | Key from https://console.x.ai |
+| `GROK_MODEL` | `grok-4-fast-non-reasoning` | First model to try. xAI renames models often; if this one is rejected, pick one from the model list in the xAI console. |
+| `GROK_FALLBACK_MODELS` | – | Comma-separated fallback models. |
 
 **Free-tier notes**
 
 - **Mistral free ("Experiment") plan:** only the small Ministral models were usable; `mistral-small` and `mistral-medium` report a limit of 0 requests per minute. `ministral-14b-latest` allows about 30 requests/minute, and `ministral-8b-latest` about 180.
 - **Gemini free tier:** about **20 requests per model per day**. The client moves to the next fallback model once a model's daily quota is used up. Quotas reset at midnight Pacific time.
-- **Request volume:** one sentence costs one LLM request. A 10-sentence report is 10 requests, at a few seconds each.
+- **Grok** is billed against xAI API credits; check your limits in the xAI console. It uses *structured outputs*, so like Gemini its replies are limited to the selected labels.
+- **Request volume:** one sentence costs one LLM request. A 10-sentence report is 10 requests.
+- **Parallel calls:** up to `LLM_PARALLEL` requests (default 4) are in flight at once, so long texts finish much sooner. Measured with Mistral on 6 sentences: **134 s one at a time, 36 s with 4 in parallel**. Running in parallel uses no extra quota. If a provider starts returning rate-limit errors, lower `LLM_PARALLEL`.
 
 **How failures are handled:**
 - **Rate limits and outages:** the client retries with back-off and then moves to the next fallback model.
@@ -265,7 +271,8 @@ pipeline.extract_records(), for each sentence:
    1. tokenizer.py            split into sentences; separate punctuation into tokens
    2. extractors/rules.py     regex patterns (extractors/patterns.py) → dates → ATT&CK/country
                               dictionaries (dictionaries/entities.json); selected types only
-   3. extractors/llm.py       one LLM call: the prompt lists the selected types, the relations
+   3. extractors/llm.py       one LLM call per sentence, several sentences in parallel
+                              (LLM_PARALLEL): the prompt lists the selected types, the relations
                               possible between them, and what the rules already found; the LLM
                               adds missing entities and all relations as (source, relation, target)
    4. merge                   LLM entities may only use tokens the rules left free (rules win)
@@ -312,13 +319,15 @@ pipeline.extract_records(), for each sentence:
 
 Each token belongs to at most one entity. Regex matches win over dates, and dates win over dictionary names.
 
-### 3. LLM (`extractors/llm.py`, `extractors/mistral.py`, `extractors/gemini.py`)
+### 3. LLM (`extractors/llm.py`, `extractors/mistral.py`, `extractors/gemini.py`, `extractors/grok.py`)
 - **The prompt** is built from `prompts/extract_v2.txt` for the current selection. It includes:
   - the selected types with their definitions;
   - the possible relations with their allowed directions;
   - the entities the rules already found;
   - hand-written examples from `prompts/examples_v2.json`, cut down to the selected types.
-- **The call:** temperature 0, JSON output. Gemini additionally gets a JSON schema that limits the labels to the selected ones.
+- **The call:** temperature 0, JSON output. Gemini and Grok additionally get a JSON schema that limits the labels to the selected ones.
+- **Parallel sentences:** the rules run for every sentence first. Then the LLM calls go out concurrently through a thread pool (`LLM_PARALLEL`, default 4), and the results are put back in sentence order. A failed call only affects its own sentence, which falls back to rules-only with a warning.
+- **Shared client:** Mistral and Grok use the same OpenAI-style client (`extractors/openai_compat.py`), which handles retries, back-off, model fallback, and skipping models the account can't use.
 - **Parsing:** invalid JSON is retried once. Unknown labels, and relations naming entities that aren't listed, are dropped.
 
 ### 4–6. Merge, validate, format
@@ -400,7 +409,9 @@ text-extractor/
 │   ├── patterns.py           regex patterns and date finder
 │   ├── rules.py              rule-based entity finder (regex + dictionaries)
 │   ├── llm.py                schema-driven prompt, JSON parsing, retries
-│   ├── mistral.py            Mistral client (JSON mode, retries, model fallback)
+│   ├── openai_compat.py      shared client for OpenAI-style APIs (retries, backoff, model fallback)
+│   ├── mistral.py            Mistral client (JSON mode)
+│   ├── grok.py               xAI Grok client (structured outputs)
 │   └── gemini.py             Gemini client (JSON schema, quota-aware fallback)
 ├── schema/
 │   ├── schema.json           the 15 types / 26 relations from the PDF (+ documented decisions)
@@ -432,7 +443,7 @@ text-extractor/
 python -m pytest -q
 ```
 
-- The suite covers the tokenizer, formatter, schema loading and custom overlay, custom-type validation, regex patterns, dictionaries, the rules on a sample report, the LLM prompt and parsing (with fake replies), the Mistral and Gemini clients (with fake HTTP), the validator, the pipeline, and every API endpoint.
+- The suite covers the tokenizer, formatter, schema loading and custom overlay, custom-type validation, regex patterns, dictionaries, the rules on a sample report, the LLM prompt and parsing (with fake replies), the Mistral, Gemini and Grok clients (with fake HTTP), the validator, the pipeline (including parallel calls, sentence order and per-sentence failures), and every API endpoint.
 - **No test calls a real LLM or the network.**
 - Tests never touch your real `schema/custom.json`: `tests/conftest.py` points it at a temporary file.
 - **DNRTI tests** in `tests/test_dataset.py` run only when `data/dnrti-je.json` is present. They check that the tokenizer and formatter rebuild the dataset's clean records exactly.
@@ -483,7 +494,7 @@ The v1 version of the project was built on the DNRTI joint entity/relation datas
 - **Relations depend entirely on the LLM.** The validator removes invalid relations but cannot catch a wrong *valid* one.
 - **Relations only link entities within the same sentence.** Pronouns ("It contacted …") are not resolved.
 - **Custom types rely on the LLM alone** and are not found in rules-only mode.
-- **Speed:** each sentence takes a few seconds. Free tiers limit how many sentences you can process per minute or per day.
+- **Speed:** each sentence takes a few seconds. Parallel calls help with long texts, but free tiers still limit how many sentences you can process per minute or per day.
 
 **Roadmap** (from `new plan.md`):
 1. **Milestone 6: evaluation.** Hand-label 50–100 sentences in the new schema, then measure entity F1 per type and relation F1 with `eval.py`. DNRTI can additionally score the entity types that map across (HackOrg → ThreatGroup, Area → Location, …).
