@@ -1,0 +1,16 @@
+# secrets
+.env
+
+# Python / tooling
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+.superpowers/
+
+# data that is downloaded or has its own licence (see README "Data")
+data/
+results/
+
+# your custom entity/relation types (local configuration; remove this line to version them)
+schema/custom.json

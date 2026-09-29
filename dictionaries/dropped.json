@@ -1,0 +1,1229 @@
+[
+ {
+  "name": "Pirpi",
+  "type": "ThreatGroup",
+  "id": "G0022",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "AppleJeus",
+  "type": "ThreatGroup",
+  "id": "G1049",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "ProjectSauron",
+  "type": "ThreatGroup",
+  "id": "G0041",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Machete",
+  "type": "ThreatGroup",
+  "id": "G0095",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Akira",
+  "type": "ThreatGroup",
+  "id": "G1024",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Carbanak",
+  "type": "ThreatGroup",
+  "id": "G0008",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Anunak",
+  "type": "ThreatGroup",
+  "id": "G0008",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "KeyBoy",
+  "type": "ThreatGroup",
+  "id": "G0081",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "WhiteBear",
+  "type": "ThreatGroup",
+  "id": "G0010",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Snake",
+  "type": "ThreatGroup",
+  "id": "G0010",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "CozyDuke",
+  "type": "ThreatGroup",
+  "id": "G0016",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Equation",
+  "type": "ThreatGroup",
+  "id": "G0020",
+  "reason": "common word"
+ },
+ {
+  "name": "Sednit",
+  "type": "ThreatGroup",
+  "id": "G0007",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Sofacy",
+  "type": "ThreatGroup",
+  "id": "G0007",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "RTM",
+  "type": "ThreatGroup",
+  "id": "G0048",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Play",
+  "type": "ThreatGroup",
+  "id": "G1040",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "StrongPity",
+  "type": "ThreatGroup",
+  "id": "G0056",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Orz",
+  "type": "Malware",
+  "id": "S0229",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "yty",
+  "type": "Malware",
+  "id": "S0248",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "PS1",
+  "type": "Malware",
+  "id": "S0613",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "StrongPity",
+  "type": "Malware",
+  "id": "S0491",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Play",
+  "type": "Malware",
+  "id": "S1162",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Machete",
+  "type": "Malware",
+  "id": "S0409",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Pirpi",
+  "type": "Malware",
+  "id": "S0063",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "KeyBoy",
+  "type": "Malware",
+  "id": "S0387",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Sofacy",
+  "type": "Malware",
+  "id": "S0137",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "ProjectSauron",
+  "type": "Malware",
+  "id": "S0125",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Rover",
+  "type": "Malware",
+  "id": "S0090",
+  "reason": "common word"
+ },
+ {
+  "name": "Epic",
+  "type": "Malware",
+  "id": "S0091",
+  "reason": "common word"
+ },
+ {
+  "name": "Akira",
+  "type": "Malware",
+  "id": "S1129",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Carbanak",
+  "type": "Malware",
+  "id": "S0030",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Anunak",
+  "type": "Malware",
+  "id": "S0030",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Page",
+  "type": "Malware",
+  "id": "S0081",
+  "reason": "common word"
+ },
+ {
+  "name": "WhiteBear",
+  "type": "Malware",
+  "id": "S0168",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Snake",
+  "type": "Malware",
+  "id": "S0022",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Sednit",
+  "type": "Malware",
+  "id": "S0044",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "RTM",
+  "type": "Malware",
+  "id": "S0148",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Wiper",
+  "type": "Malware",
+  "id": "S0041",
+  "reason": "common word"
+ },
+ {
+  "name": "Carbon",
+  "type": "Malware",
+  "id": "S0335",
+  "reason": "common word"
+ },
+ {
+  "name": "Proton",
+  "type": "Malware",
+  "id": "S0279",
+  "reason": "common word"
+ },
+ {
+  "name": "LV",
+  "type": "Malware",
+  "id": "S0385",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Agenda",
+  "type": "Malware",
+  "id": "S1242",
+  "reason": "common word"
+ },
+ {
+  "name": "AppleJeus",
+  "type": "Malware",
+  "id": "S0584",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "CozyDuke",
+  "type": "Malware",
+  "id": "S0046",
+  "reason": "ambiguous: ['Malware', 'ThreatGroup']"
+ },
+ {
+  "name": "Dok",
+  "type": "Malware",
+  "id": "S0281",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Zox",
+  "type": "Malware",
+  "id": "S0672",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Net",
+  "type": "Tool",
+  "id": "S0039",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "at",
+  "type": "Tool",
+  "id": "S0110",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Arp",
+  "type": "Tool",
+  "id": "S0099",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "cmd",
+  "type": "Tool",
+  "id": "S0106",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Expand",
+  "type": "Tool",
+  "id": "S0361",
+  "reason": "common word"
+ },
+ {
+  "name": "Reg",
+  "type": "Tool",
+  "id": "S0075",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "ftp",
+  "type": "Tool",
+  "id": "S0095",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Tor",
+  "type": "Tool",
+  "id": "S0183",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "VNC",
+  "type": "AttackTechnique",
+  "id": "T1021.005",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Adversary-in-the-Middle",
+  "type": "AttackTechnique",
+  "id": "T1557",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Rundll32",
+  "type": "AttackTechnique",
+  "id": "T1218.011",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Serverless",
+  "type": "AttackTechnique",
+  "id": "T1583.007",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Digital Certificates",
+  "type": "AttackTechnique",
+  "id": "T1596.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Keylogging",
+  "type": "AttackTechnique",
+  "id": "T1056.001",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "PubPrn",
+  "type": "AttackTechnique",
+  "id": "T1216.001",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Purchase Technical Data",
+  "type": "AttackTechnique",
+  "id": "T1597.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Sharepoint",
+  "type": "AttackTechnique",
+  "id": "T1213.002",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Artificial Intelligence",
+  "type": "AttackTechnique",
+  "id": "T1588.007",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "IP Addresses",
+  "type": "AttackTechnique",
+  "id": "T1590.005",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Rootkit",
+  "type": "AttackTechnique",
+  "id": "T1014",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "JavaScript",
+  "type": "AttackTechnique",
+  "id": "T1059.007",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "DNS",
+  "type": "AttackTechnique",
+  "id": "T1590.002",
+  "target_only": true,
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Network Devices",
+  "type": "AttackTechnique",
+  "id": "T1584.008",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Malvertising",
+  "type": "AttackTechnique",
+  "id": "T1583.008",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "WHOIS",
+  "type": "AttackTechnique",
+  "id": "T1596.002",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "DNS/Passive DNS",
+  "type": "AttackTechnique",
+  "id": "T1596.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Digital Certificates",
+  "type": "AttackTechnique",
+  "id": "T1588.004",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "DNS Server",
+  "type": "AttackTechnique",
+  "id": "T1583.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "DNS",
+  "type": "AttackTechnique",
+  "id": "T1071.004",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Bootkit",
+  "type": "AttackTechnique",
+  "id": "T1542.003",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Mavinject",
+  "type": "AttackTechnique",
+  "id": "T1218.013",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Digital Certificates",
+  "type": "AttackTechnique",
+  "id": "T1587.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Keychain",
+  "type": "AttackTechnique",
+  "id": "T1555.001",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Malware",
+  "type": "AttackTechnique",
+  "id": "T1587.001",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Malicious File",
+  "type": "AttackTechnique",
+  "id": "T1204.002",
+  "reason": "generic technique name"
+ },
+ {
+  "name": "Identify Business Tempo",
+  "type": "AttackTechnique",
+  "id": "T1591.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Hardware",
+  "type": "AttackTechnique",
+  "id": "T1592.001",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Databases",
+  "type": "AttackTechnique",
+  "id": "T1213.006",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Social Media Accounts",
+  "type": "AttackTechnique",
+  "id": "T1586.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Windows Service",
+  "type": "AttackTechnique",
+  "id": "T1543.003",
+  "reason": "generic technique name"
+ },
+ {
+  "name": "Cron",
+  "type": "AttackTechnique",
+  "id": "T1053.003",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Vulnerabilities",
+  "type": "AttackTechnique",
+  "id": "T1588.006",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "InstallUtil",
+  "type": "AttackTechnique",
+  "id": "T1218.004",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Spearphishing Link",
+  "type": "AttackTechnique",
+  "id": "T1598.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "SSH",
+  "type": "AttackTechnique",
+  "id": "T1021.004",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "DLL",
+  "type": "AttackTechnique",
+  "id": "T1574.001",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Botnet",
+  "type": "AttackTechnique",
+  "id": "T1583.005",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Drive-by Target",
+  "type": "AttackTechnique",
+  "id": "T1608.004",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Network Topology",
+  "type": "AttackTechnique",
+  "id": "T1590.004",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Code Signing Certificates",
+  "type": "AttackTechnique",
+  "id": "T1587.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Add-ins",
+  "type": "AttackTechnique",
+  "id": "T1137.006",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "AppDomainManager",
+  "type": "AttackTechnique",
+  "id": "T1574.014",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Msiexec",
+  "type": "AttackTechnique",
+  "id": "T1218.007",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Network Trust Dependencies",
+  "type": "AttackTechnique",
+  "id": "T1590.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "AppleScript",
+  "type": "AttackTechnique",
+  "id": "T1059.002",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Virtual Private Server",
+  "type": "AttackTechnique",
+  "id": "T1584.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Cloud Accounts",
+  "type": "AttackTechnique",
+  "id": "T1586.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Email Accounts",
+  "type": "AttackTechnique",
+  "id": "T1586.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Upload Malware",
+  "type": "AttackTechnique",
+  "id": "T1608.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Domains",
+  "type": "AttackTechnique",
+  "id": "T1583.001",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Masquerading",
+  "type": "AttackTechnique",
+  "id": "T1036",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Timestomp",
+  "type": "AttackTechnique",
+  "id": "T1070.006",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Systemctl",
+  "type": "AttackTechnique",
+  "id": "T1569.003",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "CMSTP",
+  "type": "AttackTechnique",
+  "id": "T1218.003",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Control Panel",
+  "type": "AttackTechnique",
+  "id": "T1218.002",
+  "reason": "generic technique name"
+ },
+ {
+  "name": "Upload Tool",
+  "type": "AttackTechnique",
+  "id": "T1608.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Threat Intel Vendors",
+  "type": "AttackTechnique",
+  "id": "T1597.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Vulnerability Scanning",
+  "type": "AttackTechnique",
+  "id": "T1595.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Defacement",
+  "type": "AttackTechnique",
+  "id": "T1491",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Server",
+  "type": "AttackTechnique",
+  "id": "T1583.004",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Trap",
+  "type": "AttackTechnique",
+  "id": "T1546.005",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Email Accounts",
+  "type": "AttackTechnique",
+  "id": "T1585.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Email Addresses",
+  "type": "AttackTechnique",
+  "id": "T1589.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Spearphishing Voice",
+  "type": "AttackTechnique",
+  "id": "T1598.004",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Written Content",
+  "type": "AttackTechnique",
+  "id": "T1683.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Network Security Appliances",
+  "type": "AttackTechnique",
+  "id": "T1590.006",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Odbcconf",
+  "type": "AttackTechnique",
+  "id": "T1218.008",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Search Engines",
+  "type": "AttackTechnique",
+  "id": "T1593.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Business Relationships",
+  "type": "AttackTechnique",
+  "id": "T1591.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Code Repositories",
+  "type": "AttackTechnique",
+  "id": "T1593.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Proxy",
+  "type": "AttackTechnique",
+  "id": "T1090",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Employee Names",
+  "type": "AttackTechnique",
+  "id": "T1589.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Client Configurations",
+  "type": "AttackTechnique",
+  "id": "T1592.004",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Malware",
+  "type": "AttackTechnique",
+  "id": "T1588.001",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Virtual Private Server",
+  "type": "AttackTechnique",
+  "id": "T1583.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Confluence",
+  "type": "AttackTechnique",
+  "id": "T1213.001",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "JamPlus",
+  "type": "AttackTechnique",
+  "id": "T1127.003",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Verclsid",
+  "type": "AttackTechnique",
+  "id": "T1218.012",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Launchctl",
+  "type": "AttackTechnique",
+  "id": "T1569.001",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Botnet",
+  "type": "AttackTechnique",
+  "id": "T1584.005",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Mshta",
+  "type": "AttackTechnique",
+  "id": "T1218.005",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Link Target",
+  "type": "AttackTechnique",
+  "id": "T1608.005",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Web Services",
+  "type": "AttackTechnique",
+  "id": "T1583.006",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Spearphishing Attachment",
+  "type": "AttackTechnique",
+  "id": "T1598.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Audio-Visual Content",
+  "type": "AttackTechnique",
+  "id": "T1683.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "CDNs",
+  "type": "AttackTechnique",
+  "id": "T1596.004",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Cloud Accounts",
+  "type": "AttackTechnique",
+  "id": "T1585.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "PowerShell",
+  "type": "AttackTechnique",
+  "id": "T1059.001",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Emond",
+  "type": "AttackTechnique",
+  "id": "T1546.014",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Tool",
+  "type": "AttackTechnique",
+  "id": "T1588.002",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "KernelCallbackTable",
+  "type": "AttackTechnique",
+  "id": "T1574.013",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Phishing",
+  "type": "AttackTechnique",
+  "id": "T1566",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "ROMMONkit",
+  "type": "AttackTechnique",
+  "id": "T1542.004",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Web Services",
+  "type": "AttackTechnique",
+  "id": "T1584.006",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Lua",
+  "type": "AttackTechnique",
+  "id": "T1059.011",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Social Media Accounts",
+  "type": "AttackTechnique",
+  "id": "T1585.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Firmware",
+  "type": "AttackTechnique",
+  "id": "T1592.003",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Regsvr32",
+  "type": "AttackTechnique",
+  "id": "T1218.010",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Software",
+  "type": "AttackTechnique",
+  "id": "T1592.002",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Exploits",
+  "type": "AttackTechnique",
+  "id": "T1587.004",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Social Media",
+  "type": "AttackTechnique",
+  "id": "T1593.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Credentials",
+  "type": "AttackTechnique",
+  "id": "T1589.001",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Wordlist Scanning",
+  "type": "AttackTechnique",
+  "id": "T1595.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Install Digital Certificate",
+  "type": "AttackTechnique",
+  "id": "T1608.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Steganography",
+  "type": "AttackTechnique",
+  "id": "T1027.003",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "DNS Server",
+  "type": "AttackTechnique",
+  "id": "T1584.002",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Regsvcs/Regasm",
+  "type": "AttackTechnique",
+  "id": "T1218.009",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "MSBuild",
+  "type": "AttackTechnique",
+  "id": "T1127.001",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "ClickOnce",
+  "type": "AttackTechnique",
+  "id": "T1127.002",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Python",
+  "type": "AttackTechnique",
+  "id": "T1059.006",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Identify Roles",
+  "type": "AttackTechnique",
+  "id": "T1591.004",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Impersonation",
+  "type": "AttackTechnique",
+  "id": "T1684.001",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Screensaver",
+  "type": "AttackTechnique",
+  "id": "T1546.002",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Scanning IP Blocks",
+  "type": "AttackTechnique",
+  "id": "T1595.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Serverless",
+  "type": "AttackTechnique",
+  "id": "T1584.007",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Visual Basic",
+  "type": "AttackTechnique",
+  "id": "T1059.005",
+  "reason": "generic technique name"
+ },
+ {
+  "name": "Server",
+  "type": "AttackTechnique",
+  "id": "T1584.004",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Domain Properties",
+  "type": "AttackTechnique",
+  "id": "T1590.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "SEO Poisoning",
+  "type": "AttackTechnique",
+  "id": "T1608.006",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "SyncAppvPublishingServer",
+  "type": "AttackTechnique",
+  "id": "T1216.002",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Code Signing Certificates",
+  "type": "AttackTechnique",
+  "id": "T1588.003",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Remote Desktop Protocol",
+  "type": "AttackTechnique",
+  "id": "T1021.001",
+  "reason": "generic technique name"
+ },
+ {
+  "name": "ListPlanting",
+  "type": "AttackTechnique",
+  "id": "T1055.015",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Scan Databases",
+  "type": "AttackTechnique",
+  "id": "T1596.005",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Determine Physical Locations",
+  "type": "AttackTechnique",
+  "id": "T1591.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "NTDS",
+  "type": "AttackTechnique",
+  "id": "T1003.003",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Steganography",
+  "type": "AttackTechnique",
+  "id": "T1001.002",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Kerberoasting",
+  "type": "AttackTechnique",
+  "id": "T1558.003",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "DCSync",
+  "type": "AttackTechnique",
+  "id": "T1003.006",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "At",
+  "type": "AttackTechnique",
+  "id": "T1053.002",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "Exploits",
+  "type": "AttackTechnique",
+  "id": "T1588.005",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Spearphishing Service",
+  "type": "AttackTechnique",
+  "id": "T1598.001",
+  "target_only": true,
+  "reason": "names a target or resource (recon/resource-development sub-technique)"
+ },
+ {
+  "name": "Domains",
+  "type": "AttackTechnique",
+  "id": "T1584.001",
+  "target_only": true,
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "Compression",
+  "type": "AttackTechnique",
+  "id": "T1027.015",
+  "reason": "single-word technique name"
+ },
+ {
+  "name": "MMC",
+  "type": "AttackTechnique",
+  "id": "T1218.014",
+  "reason": "too short or generic"
+ },
+ {
+  "name": "COR_PROFILER",
+  "type": "AttackTechnique",
+  "id": "T1574.012",
+  "reason": "single-word technique name"
+ }
+]

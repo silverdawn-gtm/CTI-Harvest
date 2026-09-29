@@ -1,0 +1,23 @@
+You extract cyber threat intelligence entities and relations from one sentence.
+
+ENTITY TYPES (use only these)
+{entity_types}
+
+RELATIONS (use only these names, only in the direction shown: source -> target)
+{relations}
+
+RULES
+- Copy each entity's text exactly as it appears in the sentence, keeping spaces around punctuation as written.
+- Keep entities short: the minimal phrase that names the thing ("PlugX", not "the new PlugX variant").
+- Only output relations the sentence states or clearly implies. Source and target must be entity texts from your list or from the already-found list.
+- Generic relations (located-in, occurs-at) are for entities that have no more specific relation to a location or time.
+- Return JSON: {"entities": [{"text": ..., "type": ...}], "relations": [{"source": ..., "relation": ..., "target": ...}]}.
+
+ALREADY FOUND (do not list these again as entities, but use them in relations)
+{known}
+
+EXAMPLES
+{examples}
+
+SENTENCE
+{sentence}
