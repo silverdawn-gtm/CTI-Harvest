@@ -104,21 +104,48 @@ async def test_llm_failure_keeps_rules_and_is_reported(ontology):
     assert "Germany" in {e.text for e in result.entities}
 
 
+# Expected offsets are counted by hand from each string, not derived from the pipeline, so a
+# wrong offset fails here (EntityMention.text is itself sliced with start:end).
 @pytest.mark.parametrize(
-    "text",
+    ("text", "expected"),
     [
-        "The “Sofacy” group’s  loader,\tX-Agent, hit Germany.",
-        "  APT28's   implant (X-Agent) contacted evil[.]com!  ",
-        "Line one about APT28.\r\nLine two: X-Agent in Germany?",
-        "APT28 — also Fancy Bear — used X-Agent… again in 2019.",
+        (
+            "The “Sofacy” group’s  loader,\tX-Agent, hit Germany.",
+            [("X-Agent", "Malware", 30, 37), ("Germany", "Location", 43, 50)],
+        ),
+        (
+            "  APT28's   implant (X-Agent) contacted evil[.]com!  ",
+            [
+                ("APT28", "ThreatGroup", 2, 7),
+                ("X-Agent", "Malware", 21, 28),
+                ("evil[.]com", "NetworkInfra", 40, 50),
+            ],
+        ),
+        (
+            "Line one about APT28.\r\nLine two: X-Agent in Germany?",
+            [
+                ("APT28", "ThreatGroup", 15, 20),
+                ("X-Agent", "Malware", 33, 40),
+                ("Germany", "Location", 44, 51),
+            ],
+        ),
+        (
+            "APT28 — also Fancy Bear — used X-Agent… again in 2019.",
+            [
+                ("APT28", "ThreatGroup", 0, 5),
+                ("Fancy Bear", "ThreatGroup", 13, 23),
+                ("X-Agent", "Malware", 31, 38),
+                ("2019", "Time", 49, 53),
+            ],
+        ),
     ],
 )
-async def test_offsets_survive_quotes_possessives_and_whitespace(ontology, text):
+async def test_offsets_survive_quotes_possessives_and_whitespace(ontology, text, expected):
     result = await extract_text(text, MATCHER, ontology)
 
-    assert result.entities
-    for e in result.entities:
-        assert text[e.start : e.end] == e.text
+    assert [(e.text, e.type, e.start, e.end) for e in result.entities] == expected
+    for surface, _type, start, end in expected:
+        assert text[start:end] == surface
 
 
 async def test_relation_ids_are_global_across_sentences(ontology):

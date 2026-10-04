@@ -8,7 +8,7 @@ character offsets.
 import re
 
 LEADING = set('"([{“«')
-TRAILING = set('",;:!?)]}”»')
+TRAILING = set('",;:!?)]}”»…')
 FINAL = TRAILING | {"."}  # a period is only split off the last token of a sentence
 
 

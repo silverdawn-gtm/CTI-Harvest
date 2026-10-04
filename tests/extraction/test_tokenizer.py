@@ -97,3 +97,11 @@ def test_splits_curly_double_quotes():
         tokenize("fetched “jquerycodedownload.live/check.aspx” from")
         == "fetched “ jquerycodedownload.live/check.aspx ” from"
     )
+
+
+def test_splits_a_trailing_ellipsis():
+    assert tokenize("X-Agent… again") == "X-Agent … again"
+
+
+def test_splits_curly_apostrophe_possessive():
+    assert tokenize("APT28’s loader") == "APT28 ’s loader"
