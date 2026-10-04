@@ -4,7 +4,9 @@ validate(spans, triples, ontology) -> (spans, triples, dropped)
 Spans whose type the ontology lacks are removed and the survivors reindexed. Triples are
 rewritten into the stored direction ("used-by" becomes "uses" with source and target swapped),
 deduplicated, and kept only if the ontology allows (source type, relation, target type).
-`dropped` explains every removal, for the output file's audit trail.
+`dropped` explains, for the output file's audit trail, every span removed for an unknown type,
+every triple removed for an unknown relation, and every triple the ontology disallows.
+Self-loops, duplicates and triples whose endpoint span was removed are dropped silently.
 """
 
 from collections.abc import Iterable, Sequence
