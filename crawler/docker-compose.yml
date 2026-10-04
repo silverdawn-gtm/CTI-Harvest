@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:16
+    container_name: crawler-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crawler
+      POSTGRES_PASSWORD: crawler
+      POSTGRES_DB: crawler
+    ports:
+      # Host port 5433, not 5432: a native Windows PostgreSQL 17 service already
+      # holds 5432 on this machine and is left untouched.
+      - "5433:5432"
+    volumes:
+      - crawler-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crawler"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  crawler-pgdata:

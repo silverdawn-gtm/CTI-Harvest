@@ -1,0 +1,113 @@
+# Every source the crawler knows about. `uv run crawler sources list` shows what loaded.
+#
+# Fields (all adapters)
+#   name        unique id, lowercase; stored as documents.source
+#   adapter     rss | sitemap | wordpress | kev | nvd
+#   entry_url   where discovery starts: feed, sitemap index, WordPress posts API, or catalog
+#   rate_limit  {requests, per_seconds}, enforced per host. Default 1 per 2.0s.
+#   license     stored on every document from this source. Default copyrighted
+#               (public-domain for kev and nvd).
+#   enabled     false keeps an entry on file without crawling it. Default true.
+#
+# Adapter-specific
+#   sitemap     child_pattern    (required) substring identifying child sitemaps holding articles
+#               article_pattern  (optional) substring every article URL must contain
+#
+# Removed rather than worked around:
+#   darkreading  - returns 403 on every article; the publisher refuses automated clients,
+#                  and spoofing a browser User-Agent to get past that is not acceptable.
+#   googletag    - https://blog.google/threat-analysis-group/rss/ now 404s.
+
+sources:
+  # --- RSS: only the sites with no better route. A feed carries a few weeks at most.
+  # bleepingcomputer publishes gzipped .txt.gz sitemaps mixed with forum threads, and
+  # securityweek returns 403 on both its sitemap and its WordPress API, so both stay on RSS.
+  # Slower than the default: small publishers, and every article in a feed is fetched back to back.
+  - name: bleepingcomputer
+    adapter: rss
+    entry_url: https://www.bleepingcomputer.com/feed/
+    rate_limit: {requests: 1, per_seconds: 3.0}
+    license: copyrighted
+
+  - name: securityweek
+    adapter: rss
+    entry_url: https://www.securityweek.com/feed/
+    rate_limit: {requests: 1, per_seconds: 3.0}
+    license: copyrighted
+
+  - name: projectzero
+    adapter: rss
+    entry_url: https://googleprojectzero.blogspot.com/feeds/posts/default
+    rate_limit: {requests: 1, per_seconds: 3.0}
+    license: copyrighted
+
+  # --- Sitemaps: whole archive, one request per article.
+  - name: krebsonsecurity
+    adapter: sitemap
+    entry_url: https://krebsonsecurity.com/sitemap.xml
+    child_pattern: posts-post
+    rate_limit: {requests: 1, per_seconds: 2.0}
+    license: copyrighted
+
+  - name: thehackernews
+    adapter: sitemap
+    entry_url: https://thehackernews.com/sitemap.xml
+    child_pattern: "sitemap.xml?page="
+    rate_limit: {requests: 1, per_seconds: 2.0}
+    license: copyrighted
+
+  - name: therecord
+    adapter: sitemap
+    entry_url: https://therecord.media/sitemap.xml
+    child_pattern: sitemaps/page-
+    rate_limit: {requests: 1, per_seconds: 2.0}
+    license: copyrighted
+
+  - name: talos
+    adapter: sitemap
+    entry_url: https://blog.talosintelligence.com/sitemap.xml
+    child_pattern: sitemap-posts
+    rate_limit: {requests: 1, per_seconds: 2.0}
+    license: copyrighted
+
+  - name: sentinelone
+    adapter: sitemap
+    entry_url: https://www.sentinelone.com/sitemap.xml
+    child_pattern: post-sitemap
+    rate_limit: {requests: 1, per_seconds: 2.0}
+    license: copyrighted
+
+  # --- WordPress REST API: 100 full-text posts per request; always the polite option.
+  - name: unit42
+    adapter: wordpress
+    entry_url: https://unit42.paloaltonetworks.com/wp-json/wp/v2/posts
+    rate_limit: {requests: 1, per_seconds: 2.0}
+    license: copyrighted
+
+  - name: microsoft
+    adapter: wordpress
+    entry_url: https://www.microsoft.com/en-us/security/blog/wp-json/wp/v2/posts
+    rate_limit: {requests: 1, per_seconds: 2.0}
+    license: copyrighted
+
+  # Root path, not /blog: the API lives at the domain root even though every article sits
+  # under /blog/. Its post sitemap times out server-side even at 60s; this answers in 0.5s.
+  - name: malwarebytes
+    adapter: wordpress
+    entry_url: https://www.malwarebytes.com/wp-json/wp/v2/posts
+    rate_limit: {requests: 1, per_seconds: 2.0}
+    license: copyrighted
+
+  # --- Structured feeds.
+  - name: kev
+    adapter: kev
+    entry_url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+    rate_limit: {requests: 1, per_seconds: 2.0}
+    license: public-domain
+
+  # Without an API key NVD allows 5 requests per 30 seconds; 6.5s keeps us comfortably legal.
+  - name: nvd
+    adapter: nvd
+    entry_url: https://services.nvd.nist.gov/rest/json/cves/2.0
+    rate_limit: {requests: 1, per_seconds: 6.5}
+    license: public-domain

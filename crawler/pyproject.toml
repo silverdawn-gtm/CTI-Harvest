@@ -1,0 +1,58 @@
+[project]
+name = "crawler"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Goutham krishna K S", email = "silverdawn1011@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.19.1",
+    "feedparser>=6.0.14",
+    "httpx>=0.28.1",
+    "psycopg[binary]>=3.3.4",
+    "pyarrow>=25.0.1",
+    "pydantic-settings>=2.15.0",
+    "pyyaml>=6.0.3",
+    "sqlalchemy>=2.0.51",
+    "trafilatura>=2.2.0",
+    "typer>=0.27.1",
+]
+
+[project.scripts]
+crawler = "crawler.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.12.2,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# UP017 rewrites datetime.timezone.utc to datetime.UTC. The design mandates
+# datetime.now(timezone.utc) verbatim for every stored timestamp, so keep that spelling.
+ignore = ["UP017"]
+
+[tool.ruff.lint.per-file-ignores]
+# Ported from text-extractor: regexes, TLD tables and test sentences that read worse wrapped.
+"src/crawler/extraction/patterns.py" = ["E501"]
+"tests/extraction/*" = ["E501"]
+
+[tool.ruff.lint.isort]
+# The migrations live in ./alembic, which makes ruff guess that the `alembic`
+# distribution is first-party. It is not.
+known-third-party = ["alembic"]
