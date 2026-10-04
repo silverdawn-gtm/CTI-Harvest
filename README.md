@@ -48,14 +48,22 @@ done, so re-running continues where the last run stopped.
 uv run crawler extract --rules-only --limit 20      # regex + ATT&CK dictionary only, no API key
 uv run crawler extract --source unit42 --limit 50    # rules, then the LLM pass
 uv run crawler extract --force --limit 10            # redo documents that already have output
+uv run crawler extract --retry-failed --limit 10     # include documents that failed 3 runs
 ```
+
+`--rules-only` writes to `data/extracted-rules/` instead (unless `--out` is given), so a
+rules-only run never marks a document as done for the LLM pass.
 
 The LLM pass needs `LLM_PROVIDER` and that provider's API key in `.env` (see `.env.example`).
 Mistral, Gemini and Grok are called through their OpenAI-compatible endpoints with a strict
 JSON schema generated from `config/ontology.json`. Requests go through the same per-host rate
-limiter as the crawler (`LLM_REQUESTS_PER_MINUTE`, `LLM_PARALLEL`). A document whose LLM pass
-failed is not written and is retried next run; three documents in a row with every sentence
-failing stop the run.
+limiter as the crawler (`LLM_REQUESTS_PER_MINUTE`, `LLM_PARALLEL`).
+
+A document whose LLM pass failed is not written; its `<url_hash>.failed.json` counts failed
+runs. Later runs try new documents first and retry failed ones after them, until a document has
+failed three runs (then only `--retry-failed` or `--force` picks it up again). Three documents
+in a row with every sentence failing stop the run, and so does a rejected API key, request or
+model (HTTP 400, 401, 403 or 404).
 
 ## Tests
 

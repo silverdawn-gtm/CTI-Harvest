@@ -274,9 +274,17 @@ def export(
 def extract(
     source: str | None = typer.Option(None, help="Comma-separated source names."),
     limit: int = typer.Option(50, min=1, help="Extract at most this many documents."),
-    out: Path | None = typer.Option(None, "--out", help="Output directory [data/extracted]."),  # noqa: B008
+    out: Path | None = typer.Option(  # noqa: B008
+        None,
+        "--out",
+        help="Output directory (default: data/extracted, "
+        "or data/extracted-rules with --rules-only).",
+    ),
     rules_only: bool = typer.Option(False, "--rules-only", help="Skip the LLM pass."),
     force: bool = typer.Option(False, "--force", help="Redo documents that already have output."),
+    retry_failed: bool = typer.Option(
+        False, "--retry-failed", help="Also retry documents that failed 3 runs in a row."
+    ),
 ) -> None:
     """Extract CTI entities and relations into <out>/<url_hash>.json, one file per document."""
     from crawler.extraction import runner
@@ -285,11 +293,21 @@ def extract(
 
     settings = get_settings()
     names = [n.strip() for n in source.split(",") if n.strip()] if source else None
-    out_dir = out or settings.extracted_dir
+    if names:
+        _load_sources()
+        known = {s.name for s in source_registry.all_sources()}
+        unknown = [n for n in names if n not in known]
+        if unknown:
+            typer.secho(f"Unknown source names: {', '.join(unknown)}", fg=typer.colors.YELLOW)
+    # Rule-only output goes elsewhere by default: a file in extracted_dir means "done", and
+    # an LLM run must not skip a document because a rules-only run got to it first.
+    out_dir = out or (settings.extracted_rules_dir if rules_only else settings.extracted_dir)
 
     try:
         summary = asyncio.run(
-            runner.run(settings, names, limit, out_dir, rules_only, force, typer.echo)
+            runner.run(
+                settings, names, limit, out_dir, rules_only, force, typer.echo, retry_failed
+            )
         )
     except (LLMError, OntologyError, runner.ExtractionAborted) as exc:
         typer.secho(f"FAILED: {exc}", fg=typer.colors.RED)
@@ -297,8 +315,8 @@ def extract(
 
     colour = typer.colors.YELLOW if summary.failed else typer.colors.GREEN
     typer.secho(
-        f"Wrote {summary.written} files; {summary.failed} documents failed "
-        "and will be retried on the next run.",
+        f"Wrote {summary.written} files; {summary.failed} documents failed. A failed "
+        "document is retried on later runs until it has failed 3 in a row.",
         fg=colour,
     )
 

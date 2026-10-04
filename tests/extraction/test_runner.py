@@ -7,10 +7,12 @@ from crawler.extraction.client import LLMFatal
 from crawler.extraction.pipeline import DocumentExtraction, EntityMention, RelationTriple
 from crawler.extraction.rules import RuleMatcher
 from crawler.extraction.runner import (
+    MAX_FAILED_ATTEMPTS,
     DocumentRow,
     ExtractionAborted,
     Summary,
     build_record,
+    failed_path,
     output_path,
     process,
     select_pending,
@@ -144,7 +146,7 @@ async def test_documents_with_llm_failures_are_not_written(tmp_path, ontology):
     summary = await process([row(1)], tmp_path, MATCHER, ontology, FakeLLM(fail=True), lines.append)
 
     assert summary == Summary(written=0, failed=1)
-    assert list(tmp_path.iterdir()) == []
+    assert [p.name for p in tmp_path.iterdir()] == [f"{1:064x}.failed.json"]
     assert "FAILED 1/1 sentences" in lines[0]
     assert select_pending([(1, f"{1:064x}")], tmp_path, limit=5, force=False) == [1]
 
@@ -154,6 +156,7 @@ async def test_three_dead_documents_in_a_row_abort(tmp_path, ontology):
 
     with pytest.raises(ExtractionAborted, match="3 documents in a row.*bad key"):
         await process(rows, tmp_path, MATCHER, ontology, FakeLLM(fail=True), lambda line: None)
+    # The provider looks down, not the documents: the aborting streak is not held against them.
     assert list(tmp_path.iterdir()) == []
 
 
@@ -185,3 +188,89 @@ async def test_a_fatal_llm_error_stops_the_run_at_the_first_document(tmp_path, o
         await process(rows, tmp_path, MATCHER, ontology, Rejecting(), lambda line: None)
     assert Rejecting.calls == 1
     assert list(tmp_path.iterdir()) == []
+
+
+def sidecar(out_dir, n: int) -> dict:
+    return json.loads(failed_path(out_dir, f"{n:064x}").read_text(encoding="utf-8"))
+
+
+def mark_failed(out_dir, url_hash: str, attempts: int) -> None:
+    failed_path(out_dir, url_hash).write_text(
+        json.dumps({"url_hash": url_hash, "attempts": attempts}), encoding="utf-8"
+    )
+
+
+async def test_a_failed_document_gets_a_sidecar_counting_attempts(tmp_path, ontology):
+    flaky_rows = [row(1, "The first one. APT28 used X-Agent.")]
+
+    class Flaky:
+        model_name = "m"
+
+        async def extract(self, sentence, known=()):
+            if "first" in sentence:
+                raise RuntimeError("blip")
+            return [], []
+
+    await process(flaky_rows, tmp_path, MATCHER, ontology, Flaky(), lambda line: None, lambda: NOW)
+    first = sidecar(tmp_path, 1)
+    assert first == {
+        "url_hash": f"{1:064x}",
+        "attempts": 1,
+        "last_warnings": ["sentence 0: LLM failed (RuntimeError: blip); rules only"],
+        "updated_at": NOW.isoformat(),
+    }
+
+    await process(flaky_rows, tmp_path, MATCHER, ontology, Flaky(), lambda line: None, lambda: NOW)
+    assert sidecar(tmp_path, 1)["attempts"] == 2
+    assert not output_path(tmp_path, f"{1:064x}").exists()
+
+
+async def test_success_removes_the_sidecar(tmp_path, ontology):
+    mark_failed(tmp_path, f"{1:064x}", 2)
+
+    await process([row(1)], tmp_path, MATCHER, ontology, FakeLLM(), lambda line: None)
+
+    assert [p.name for p in tmp_path.iterdir()] == [f"{1:064x}.json"]
+
+
+async def test_dead_documents_before_a_live_one_are_counted(tmp_path, ontology):
+    class DeadThenAlive:
+        model_name = "m"
+
+        async def extract(self, sentence, known=()):
+            if "dead" in sentence:
+                raise RuntimeError("blip")
+            return [], []
+
+    rows = [row(1, "dead."), row(2, "dead."), row(3)]
+    summary = await process(rows, tmp_path, MATCHER, ontology, DeadThenAlive(), lambda line: None)
+
+    assert summary == Summary(written=1, failed=2)
+    assert sidecar(tmp_path, 1)["attempts"] == 1 and sidecar(tmp_path, 2)["attempts"] == 1
+
+
+def test_sidecars_do_not_count_as_extracted(tmp_path):
+    mark_failed(tmp_path, "a", 1)
+    assert select_pending([(1, "a")], tmp_path, limit=5, force=False) == [1]
+
+
+def test_documents_that_failed_three_runs_are_skipped(tmp_path):
+    mark_failed(tmp_path, "a", MAX_FAILED_ATTEMPTS)
+    mark_failed(tmp_path, "b", MAX_FAILED_ATTEMPTS - 1)
+    candidates = [(1, "a"), (2, "b"), (3, "c")]
+
+    assert MAX_FAILED_ATTEMPTS == 3
+    assert select_pending(candidates, tmp_path, limit=5, force=False) == [3, 2]
+    assert select_pending(candidates, tmp_path, 5, False, retry_failed=True) == [3, 1, 2]
+    assert select_pending(candidates, tmp_path, limit=5, force=True) == [3, 1, 2]
+
+
+def test_fresh_documents_come_before_previously_failed_ones(tmp_path):
+    mark_failed(tmp_path, "a", 1)
+    mark_failed(tmp_path, "b", 2)
+    output_path(tmp_path, "d").write_text("{}", encoding="utf-8")
+    candidates = [(1, "a"), (2, "b"), (3, "c"), (4, "d"), (5, "e")]
+
+    assert select_pending(candidates, tmp_path, limit=2, force=False) == [3, 5]
+    assert select_pending(candidates, tmp_path, limit=3, force=False) == [3, 5, 1]
+    assert select_pending(candidates, tmp_path, limit=10, force=False) == [3, 5, 1, 2]

@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from crawler.config import Settings
 
 
@@ -20,3 +23,22 @@ def test_user_agent_has_contact_info(monkeypatch):
     settings = Settings()
 
     assert "+" in settings.user_agent or "@" in settings.user_agent
+
+
+def test_extraction_defaults(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5433/crawler")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.extracted_dir == Path("data/extracted")
+    assert settings.extracted_rules_dir == Path("data/extracted-rules")
+    assert settings.gemini_fallback_models == "gemini-3.6-flash,gemini-2.5-flash"
+
+
+@pytest.mark.parametrize("field", ["LLM_PARALLEL", "LLM_REQUESTS_PER_MINUTE"])
+def test_llm_concurrency_settings_must_be_positive(monkeypatch, field):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5433/crawler")
+    monkeypatch.setenv(field, "0")
+
+    with pytest.raises(ValidationError, match=field.lower()):
+        Settings(_env_file=None)

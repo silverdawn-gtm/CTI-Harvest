@@ -14,6 +14,7 @@ __pycache__/
 data/raw/
 data/export/
 data/extracted/
+data/extracted-rules/
 
 # Subagent-driven development scratch workspace
 .superpowers/
