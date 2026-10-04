@@ -1,0 +1,53 @@
+[
+  {
+    "text": "In March 2019 , APT28 used X-Agent to target government agencies in Germany .",
+    "entities": [
+      {"text": "March 2019", "type": "Time"},
+      {"text": "APT28", "type": "ThreatGroup"},
+      {"text": "X-Agent", "type": "Malware"},
+      {"text": "government agencies", "type": "Organization"},
+      {"text": "Germany", "type": "Location"}
+    ],
+    "relations": [
+      {"source": "APT28", "relation": "uses", "target": "X-Agent"},
+      {"source": "APT28", "relation": "targets", "target": "government agencies"},
+      {"source": "APT28", "relation": "operates-in", "target": "Germany"},
+      {"source": "APT28", "relation": "active-at", "target": "March 2019"}
+    ]
+  },
+  {
+    "text": "Kaspersky Lab detected Emotet , delivered in invoice.doc , which exploits CVE-2017-11882 in Microsoft Office and contacts update-check[.]com .",
+    "entities": [
+      {"text": "Kaspersky Lab", "type": "SecurityTeam"},
+      {"text": "Emotet", "type": "Malware"},
+      {"text": "invoice.doc", "type": "FileHash"},
+      {"text": "CVE-2017-11882", "type": "Vulnerability"},
+      {"text": "Microsoft Office", "type": "Software"},
+      {"text": "update-check[.]com", "type": "NetworkInfra"}
+    ],
+    "relations": [
+      {"source": "Kaspersky Lab", "relation": "detects", "target": "Emotet"},
+      {"source": "invoice.doc", "relation": "indicates", "target": "Emotet"},
+      {"source": "Emotet", "relation": "exploits", "target": "CVE-2017-11882"},
+      {"source": "CVE-2017-11882", "relation": "affects", "target": "Microsoft Office"},
+      {"source": "Emotet", "relation": "communicates-with", "target": "update-check[.]com"}
+    ]
+  },
+  {
+    "text": "A Russian-speaking hacker used Mimikatz for credential dumping and a watering hole attack to compromise domain controllers .",
+    "entities": [
+      {"text": "Russian-speaking hacker", "type": "ThreatActor"},
+      {"text": "Mimikatz", "type": "Tool"},
+      {"text": "credential dumping", "type": "AttackTechnique"},
+      {"text": "watering hole attack", "type": "AttackPattern"},
+      {"text": "domain controllers", "type": "Asset"}
+    ],
+    "relations": [
+      {"source": "Russian-speaking hacker", "relation": "uses", "target": "Mimikatz"},
+      {"source": "Russian-speaking hacker", "relation": "uses", "target": "credential dumping"},
+      {"source": "Russian-speaking hacker", "relation": "uses", "target": "watering hole attack"},
+      {"source": "Russian-speaking hacker", "relation": "targets", "target": "domain controllers"},
+      {"source": "credential dumping", "relation": "uses", "target": "Mimikatz"}
+    ]
+  }
+]
