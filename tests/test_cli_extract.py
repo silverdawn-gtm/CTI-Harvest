@@ -88,3 +88,28 @@ def test_nothing_to_extract(monkeypatch, tmp_path):
 
     assert result.exit_code == 0
     assert "Nothing to extract." in result.output
+
+
+def test_a_rejected_key_fails_the_run_at_once(monkeypatch, tmp_path):
+    from crawler.extraction.client import LLMFatal
+
+    calls = []
+
+    async def rejecting_chat(prompt, schema):
+        calls.append(prompt)
+        raise LLMFatal("m1: HTTP 401: invalid api key")
+
+    rows = [
+        runner.DocumentRow(n, f"https://e.org/{n}", f"{n:064x}", "unit42", None, None, "APT28.")
+        for n in range(1, 4)
+    ]
+    monkeypatch.setattr(runner, "build_chat_client", lambda *args: rejecting_chat)
+    monkeypatch.setattr(runner, "session_scope", no_database)
+    monkeypatch.setattr(runner, "load_pending", lambda *args: rows)
+
+    result = CliRunner().invoke(cli.app, ["extract", "--out", str(tmp_path)])
+
+    assert result.exit_code == 1, result.output
+    assert "FAILED: m1: HTTP 401: invalid api key" in result.output
+    assert len(calls) == 1
+    assert list(tmp_path.iterdir()) == []

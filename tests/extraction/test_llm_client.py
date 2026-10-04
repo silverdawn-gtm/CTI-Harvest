@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from crawler.config import Settings
-from crawler.extraction.client import PROVIDERS, ChatClient, LLMError, build_chat_client
+from crawler.extraction.client import PROVIDERS, ChatClient, LLMError, LLMFatal, build_chat_client
 
 URL = "https://llm.example/v1/chat/completions"
 
@@ -85,9 +85,33 @@ async def test_client_errors_are_not_retried():
         calls.append(request)
         return httpx.Response(400, text="schema not supported")
 
-    with pytest.raises(LLMError, match="HTTP 400: schema not supported"):
+    with pytest.raises(LLMFatal, match="HTTP 400: schema not supported"):
         await make(handler)("p", {})
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 404])
+async def test_rejected_key_or_schema_is_fatal(status):
+    with pytest.raises(LLMFatal, match=f"HTTP {status}"):
+        await make(lambda request: httpx.Response(status), models=("m1", "m2"))("p", {})
+
+
+async def test_other_client_errors_are_not_retried_but_not_fatal():
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(422, text="unprocessable")
+
+    with pytest.raises(LLMError, match="HTTP 422") as caught:
+        await make(handler)("p", {})
+    assert not isinstance(caught.value, LLMFatal)
+    assert len(calls) == 1
+
+
+async def test_gateway_timeout_is_retried():
+    replies = iter([httpx.Response(504), ok("fine")])
+    assert await make(lambda request: next(replies))("p", {}) == "fine"
 
 
 async def test_model_without_allowance_falls_back_to_the_next():

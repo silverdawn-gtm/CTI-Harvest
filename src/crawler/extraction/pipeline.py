@@ -1,6 +1,8 @@
 """Document text in, ontology-checked entities and relations out.
 
 Per sentence: tokenize, run the rules, then ask the LLM for what the rules did not find.
+An LLM error costs only that sentence its LLM pass, except LLMFatal (a rejected key or
+schema), which cancels the document's other requests and propagates to the caller.
 Rule spans win any overlap, so the LLM can add entities but never relabel a regex or
 dictionary hit. The merged result goes through the validator, and survivors are mapped back
 to character offsets in the original text.
@@ -11,6 +13,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
+from crawler.extraction.client import LLMFatal
 from crawler.extraction.formatter import locate_spans, resolve_triples, token_offsets
 from crawler.extraction.ontology import Ontology
 from crawler.extraction.rules import RuleMatcher
@@ -91,11 +94,19 @@ async def extract_text(
             return [], [], None
         try:
             entities, triples = await llm.extract(s.tokenized, known=s.rule_spans)
+        except LLMFatal:
+            raise  # a rejected key or schema: every other request would fail the same way
         except Exception as exc:  # noqa: BLE001 - one bad sentence must not sink the document
             return [], [], exc
         return entities, triples, None
 
-    answers = await asyncio.gather(*(ask(s) for s in sentences))
+    # A TaskGroup cancels the sentences still in flight as soon as one raises LLMFatal.
+    try:
+        async with asyncio.TaskGroup() as group:
+            tasks = [group.create_task(ask(s)) for s in sentences]
+    except* LLMFatal as fatal:
+        raise fatal.exceptions[0] from None
+    answers = [task.result() for task in tasks]
 
     entities: list[EntityMention] = []
     relations: list[RelationTriple] = []

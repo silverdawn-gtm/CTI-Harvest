@@ -1,5 +1,8 @@
+import asyncio
+
 import pytest
 
+from crawler.extraction.client import LLMFatal
 from crawler.extraction.pipeline import DocumentExtraction, RelationTriple, extract_text
 from crawler.extraction.rules import RuleMatcher
 
@@ -102,6 +105,29 @@ async def test_llm_failure_keeps_rules_and_is_reported(ontology):
     assert result.llm_failures == 1
     assert result.warnings == ("sentence 1: LLM failed (RuntimeError: quota exceeded); rules only",)
     assert "Germany" in {e.text for e in result.entities}
+
+
+async def test_a_fatal_llm_error_stops_the_document_and_cancels_other_sentences(ontology):
+    finished: list[str] = []
+    cancelled: list[str] = []
+
+    class Rejecting:
+        async def extract(self, sentence, known=()):
+            if "Germany" in sentence:
+                raise LLMFatal("m: HTTP 401: bad key")
+            try:
+                await asyncio.sleep(5)
+            except asyncio.CancelledError:
+                cancelled.append(sentence)
+                raise
+            finished.append(sentence)
+            return [], []
+
+    text = "APT28 used X-Agent. They hit Germany. Fancy Bear came back."
+    with pytest.raises(LLMFatal, match="HTTP 401"):
+        await asyncio.wait_for(extract_text(text, MATCHER, ontology, Rejecting()), timeout=2)
+    assert finished == []
+    assert len(cancelled) == 2
 
 
 # Expected offsets are counted by hand from each string, not derived from the pipeline, so a

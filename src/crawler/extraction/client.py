@@ -19,12 +19,19 @@ PROVIDERS: dict[str, str] = {
     "gemini": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
     "grok": "https://api.x.ai/v1/chat/completions",
 }
-RETRY_STATUS = frozenset({429, 500, 502, 503})
+RETRY_STATUS = frozenset({429, 500, 502, 503, 504})
+# A rejected request, key or schema, or an unknown endpoint or model: every later request
+# would fail the same way, so the whole run stops.
+FATAL_STATUS = frozenset({400, 401, 403, 404})
 SCHEMA_NAME = "cti_extraction"
 
 
 class LLMError(RuntimeError):
     """The provider did not produce a usable reply."""
+
+
+class LLMFatal(LLMError):
+    """The provider rejected the request in a way no other sentence or document will escape."""
 
 
 class Limiter(Protocol):
@@ -41,8 +48,9 @@ def response_format(schema: dict[str, Any]) -> dict[str, Any]:
 class ChatClient:
     """complete(prompt, schema) for one provider, trying each model in order.
 
-    429 and 5xx are retried with backoff; any other error status is raised at once, since
-    retrying a rejected key or schema only spends quota. A model the account has no
+    429, 500, 502, 503 and 504 are retried with backoff; any other error status is raised at
+    once, since retrying a rejected key or schema only spends quota. 400, 401, 403 and 404
+    raise LLMFatal, which callers treat as the end of the run. A model the account has no
     allowance for (limit 0 requests/minute) is skipped for the rest of the run.
     `last_model` names the model that answered most recently.
     """
@@ -91,7 +99,8 @@ class ChatClient:
                     if response.status_code == 200:
                         self.last_model = model
                         return _content(response, model)
-                    last_error = LLMError(
+                    error = LLMFatal if response.status_code in FATAL_STATUS else LLMError
+                    last_error = error(
                         f"{model}: HTTP {response.status_code}: {response.text[:300]}"
                     )
                     if response.status_code not in RETRY_STATUS:

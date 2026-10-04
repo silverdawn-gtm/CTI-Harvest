@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from crawler.extraction.client import LLMFatal
 from crawler.extraction.pipeline import DocumentExtraction, EntityMention, RelationTriple
 from crawler.extraction.rules import RuleMatcher
 from crawler.extraction.runner import (
@@ -168,3 +169,19 @@ async def test_a_partial_failure_does_not_count_toward_the_abort(tmp_path, ontol
     rows = [row(n, "The first one. APT28 used X-Agent.") for n in range(1, 5)]
     summary = await process(rows, tmp_path, MATCHER, ontology, Flaky(), lambda line: None)
     assert summary == Summary(written=0, failed=4)
+
+
+async def test_a_fatal_llm_error_stops_the_run_at_the_first_document(tmp_path, ontology):
+    class Rejecting:
+        model_name = "m"
+        calls = 0
+
+        async def extract(self, sentence, known=()):
+            Rejecting.calls += 1
+            raise LLMFatal("m: HTTP 401: bad key")
+
+    rows = [row(n) for n in range(1, 4)]
+    with pytest.raises(LLMFatal, match="HTTP 401"):
+        await process(rows, tmp_path, MATCHER, ontology, Rejecting(), lambda line: None)
+    assert Rejecting.calls == 1
+    assert list(tmp_path.iterdir()) == []
