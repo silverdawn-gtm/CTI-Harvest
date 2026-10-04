@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     database_url: str
     test_database_url: str | None = None
     raw_archive_dir: Path = Path("data/raw")
+    sources_config: Path = Path("config/sources.yaml")
     user_agent: str = (
         "cyber-threat-crawler/0.1 (research crawler; +https://github.com/local/crawler)"
     )
