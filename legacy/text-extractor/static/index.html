@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Threat-Intel Extractor</title>
+<style>
+  :root {
+    --bg: #fafaf9; --fg: #1c1917; --muted: #78716c; --line: #e7e5e4; --panel: #fff;
+    --accent: #1c1917; --accent-fg: #fff; --err: #b91c1c; --warn-bg: #fef3c7; --warn-fg: #78350f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1917; --fg: #f5f5f4; --muted: #a8a29e; --line: #44403c; --panel: #292524;
+      --accent: #f5f5f4; --accent-fg: #1c1917; --err: #f87171; --warn-bg: #422006; --warn-fg: #fde68a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+       margin: 28px 0 10px; font-weight: 600; }
+  textarea { width: 100%; min-height: 130px; padding: 12px; font: inherit; color: inherit;
+             background: var(--panel); border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .bar { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  button { font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+           border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg); }
+  button.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
+  button.small { padding: 2px 10px; font-size: 13px; }
+  button:disabled { opacity: .5; cursor: default; }
+  #status { color: var(--muted); font-size: 14px; }
+  #status.err { color: var(--err); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .panel-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .panel-head strong { font-size: 14px; margin-right: auto; }
+  .groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 16px; }
+  .group-name { font-size: 12px; color: var(--muted); margin: 6px 0 2px; }
+  label.check { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; padding: 1px 0; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .rels { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .rels label.check { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  .empty { color: var(--muted); font-size: 14px; }
+  .panels { display: grid; gap: 10px; margin-top: 14px; }
+  #warnings { background: var(--warn-bg); color: var(--warn-fg); border-radius: 8px; padding: 8px 12px;
+              font-size: 14px; margin-top: 14px; }
+  .sentence { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+              padding: 10px 14px; margin-bottom: 8px; line-height: 2; overflow-wrap: anywhere; }
+  mark { color: #1c1917; border-radius: 4px; padding: 1px 4px; }
+  mark small { font-size: 10px; font-weight: 700; margin-left: 4px; opacity: .7; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; font-size: 12px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+  th { color: var(--muted); font-weight: 600; }
+  td.rel { font-family: ui-monospace, Consolas, monospace; font-size: 13px; white-space: nowrap; }
+  pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+        overflow: auto; max-height: 420px; font-size: 12px; margin: 0; }
+  button.x { background: none; border: none; color: var(--muted); padding: 0 4px; font-size: 14px; line-height: 1; }
+  button.x:hover { color: var(--err); }
+  button.x.armed { color: var(--err); font-size: 12px; }
+  details.panel summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  .custom-forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 10px; }
+  .custom-forms h3 { font-size: 13px; margin: 0 0 6px; }
+  .field { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+  .field input, .field select { font: inherit; font-size: 14px; color: var(--fg); background: var(--bg);
+                                border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; min-width: 0; }
+  .pair-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .pair-row select { flex: 1 1 120px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 6px 0; font-size: 13px; }
+  .chips span { font-family: ui-monospace, Consolas, monospace; }
+  .form-error { color: var(--err); font-size: 13px; min-height: 1em; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Threat-Intel Extractor</h1>
+  <p class="sub">Paste threat-report text, choose what to extract, and get entities and relations as JSON.</p>
+
+  <textarea id="input" placeholder="In March 2019, APT28 (also known as Fancy Bear) used X-Agent to target government agencies in Germany. The malware contacted hxxp://update-check[.]com/gate.php."></textarea>
+
+  <div class="panels">
+    <section class="panel">
+      <div class="panel-head">
+        <strong>Entity types</strong>
+        <span id="presets"></span>
+        <button class="ghost small" id="types-all">Select all</button>
+        <button class="ghost small" id="types-none">Clear</button>
+      </div>
+      <div class="groups" id="types"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <strong>Relations</strong>
+        <button class="ghost small" id="rels-all">Select all</button>
+        <button class="ghost small" id="rels-none">Clear</button>
+      </div>
+      <div class="rels" id="rels"></div>
+    </section>
+  </div>
+
+  <details class="panel" id="custom-panel" style="margin-top: 10px">
+    <summary>Custom types</summary>
+    <div class="custom-forms">
+      <form id="type-form">
+        <h3>Add entity type</h3>
+        <label class="field">Name (one word, e.g. CryptoWallet)<input name="name" required></label>
+        <label class="field">Label<input name="label" required></label>
+        <label class="field">Description (used by the LLM)<input name="description" required></label>
+        <button type="submit" class="small">Add entity type</button>
+        <div class="form-error" id="type-error"></div>
+      </form>
+      <form id="rel-form">
+        <h3>Add relation</h3>
+        <label class="field">Name (e.g. pays-to)<input name="name" required></label>
+        <label class="field">Inverse (e.g. paid-by; empty = same)<input name="inverse"></label>
+        <label class="field">Description<input name="description" required></label>
+        <div class="field">Allowed pairs (source → target)
+          <div class="pair-row">
+            <select id="pair-source"></select><span>→</span><select id="pair-target"></select>
+            <button type="button" class="ghost small" id="pair-add">Add pair</button>
+          </div>
+        </div>
+        <div class="chips" id="pair-list"></div>
+        <button type="submit" class="small">Add relation</button>
+        <div class="form-error" id="rel-error"></div>
+      </form>
+    </div>
+    <div class="field" style="margin-top: 8px">Custom relations</div>
+    <div class="chips" id="custom-rels"></div>
+  </details>
+
+  <div class="bar">
+    <button id="go">Extract</button>
+    <span id="status"></span>
+  </div>
+  <div id="warnings" hidden></div>
+
+  <section id="results" hidden>
+    <h2>Entities</h2>
+    <div class="legend" id="legend"></div>
+    <div id="sentences"></div>
+
+    <h2>Relations</h2>
+    <div id="relations"></div>
+
+    <h2>JSON</h2>
+    <div class="bar" style="margin: 0 0 10px">
+      <button class="ghost" id="download">Download JSON</button>
+      <button class="ghost" id="copy">Copy</button>
+    </div>
+    <pre id="json"></pre>
+  </section>
+</main>
+
+<script>
+const COLORS = {
+  ThreatActor: "#fecaca", ThreatGroup: "#fca5a5", Malware: "#fdba74", AttackTechnique: "#f9a8d4",
+  Vulnerability: "#fda4af", Software: "#c4b5fd", Tool: "#fcd34d", Organization: "#93c5fd",
+  AttackPattern: "#f0abfc", FileHash: "#bef264", NetworkInfra: "#86efac", Asset: "#a5b4fc",
+  SecurityTeam: "#67e8f9", Time: "#d8b4fe", Location: "#5eead4",
+};
+const CUSTOM_COLORS = ["#e9d5ff", "#fed7aa", "#bbf7d0", "#bfdbfe", "#fde68a", "#fbcfe8", "#99f6e4", "#ddd6fe"];
+let pendingPairs = [];
+
+function colorOf(name) {
+  if (COLORS[name]) return COLORS[name];
+  const custom = schema ? schema.entity_types.filter((t) => t.custom).map((t) => t.name) : [];
+  return CUSTOM_COLORS[Math.max(0, custom.indexOf(name)) % CUSTOM_COLORS.length];
+}
+const STORE_KEY = "tie-selection-v1";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let schema = null;
+let selectedTypes = new Set();
+let uncheckedRels = new Set();   // relations the user switched off; remembered across type changes
+let availableRels = {};
+let records = [];
+let relSeq = 0;
+
+function save() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ types: [...selectedTypes], off: [...uncheckedRels] }));
+  } catch (e) { /* storage unavailable: selection just isn't remembered */ }
+}
+
+function restore() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (saved) {
+      const known = new Set(schema.entity_types.map((t) => t.name));
+      selectedTypes = new Set(saved.types.filter((t) => known.has(t)));
+      uncheckedRels = new Set(saved.off || []);
+      return;
+    }
+  } catch (e) { /* fall through to default */ }
+  selectedTypes = new Set(schema.presets["Everything"]);
+}
+
+function renderTypes() {
+  const groups = {};
+  for (const t of schema.entity_types) (groups[t.group] ||= []).push(t);
+  $("types").innerHTML = Object.entries(groups).map(([group, types]) => `
+    <div><div class="group-name">${esc(group)}</div>${types.map((t) => `
+      <label class="check" title="${esc(t.description)}">
+        <input type="checkbox" data-type="${t.name}" ${selectedTypes.has(t.name) ? "checked" : ""}>
+        <span class="swatch" style="background:${colorOf(t.name)}"></span>${esc(t.label)}
+        ${t.custom ? `<button type="button" class="x" data-delete-type="${t.name}" title="Delete ${esc(t.label)}">×</button>` : ""}
+      </label>`).join("")}</div>`).join("");
+}
+
+async function refreshRelations() {
+  const seq = ++relSeq;
+  let data;
+  try {
+    data = await getJSON("/relations?types=" + encodeURIComponent([...selectedTypes].join(",")));
+  } catch (err) {
+    if (seq === relSeq) $("rels").innerHTML = `<span class="empty">Could not load relations: ${esc(err.message)}</span>`;
+    return;
+  }
+  if (seq !== relSeq) return; // a newer selection is already loading
+  availableRels = data;
+  const names = Object.keys(data);
+  $("rels").innerHTML = names.length ? names.map((name) => {
+    const r = data[name];
+    const pairs = r.pairs.map(([s, t]) => `${s} → ${t}`).join(", ");
+    return `<label class="check" title="${esc(r.description)}\n${esc(pairs)}">
+      <input type="checkbox" data-rel="${name}" ${uncheckedRels.has(name) ? "" : "checked"}>${esc(name)}</label>`;
+  }).join("") : `<span class="empty">No relations are possible between the selected types.</span>`;
+}
+
+function setTypes(types) {
+  selectedTypes = new Set(types);
+  renderTypes();
+  save();
+  refreshRelations();
+}
+
+function renderSentence(rec, labels) {
+  const tokens = rec.text.split(/\s+/);
+  const starts = new Map(rec.entities.map((e) => [e[0], e]));
+  const out = [];
+  for (let i = 0; i < tokens.length;) {
+    const ent = starts.get(i);
+    if (ent) {
+      const [s, e, , type] = ent;
+      out.push(`<mark style="background:${colorOf(type)}">${esc(tokens.slice(s, e).join(" "))}<small>${esc(labels[type] || type)}</small></mark>`);
+      i = e;
+    } else {
+      out.push(esc(tokens[i++]));
+    }
+  }
+  return `<div class="sentence">${out.join(" ")}</div>`;
+}
+
+function render(warnings) {
+  const labels = Object.fromEntries(schema.entity_types.map((t) => [t.name, t.label]));
+  $("warnings").hidden = !warnings.length;
+  $("warnings").innerHTML = warnings.map(esc).join("<br>");
+
+  const used = new Set(records.flatMap((r) => r.entities.map((e) => e[3])));
+  $("legend").innerHTML = schema.entity_types.filter((t) => used.has(t.name))
+    .map((t) => `<mark style="background:${colorOf(t.name)}">${esc(t.label)}</mark>`).join("");
+  $("sentences").innerHTML = records.map((r) => renderSentence(r, labels)).join("")
+    || `<p class="empty">No sentences found.</p>`;
+
+  const rows = records.flatMap((r) => r.relations
+    .filter(([rel]) => rel !== "noRelation")
+    .map(([rel, i, j]) => `<tr><td>${esc(r.entities[j][2])}</td><td class="rel">${esc(rel)}</td><td>${esc(r.entities[i][2])}</td></tr>`));
+  $("relations").innerHTML = rows.length
+    ? `<div class="table-wrap"><table><thead><tr><th>Source</th><th>Relation</th><th>Target</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`
+    : `<p class="empty">No relations found.</p>`;
+
+  $("json").textContent = JSON.stringify(records, null, 2);
+  $("results").hidden = false;
+}
+
+function setStatus(msg, isErr = false) {
+  $("status").textContent = msg;
+  $("status").className = isErr ? "err" : "";
+}
+
+async function extract() {
+  const text = $("input").value.trim();
+  if (!text) return setStatus("Enter some text first.", true);
+  if (!selectedTypes.size) return setStatus("Select at least one entity type.", true);
+  const available = Object.keys(availableRels);
+  const relation_types = available.some((r) => uncheckedRels.has(r))
+    ? available.filter((r) => !uncheckedRels.has(r)) : null;
+  $("go").disabled = true;
+  const t0 = performance.now();
+  setStatus("Extracting… (a few seconds per sentence)");
+  try {
+    const res = await fetch("/extract", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, entity_types: [...selectedTypes], relation_types }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(typeof body.detail === "string" ? body.detail : res.statusText);
+    records = body.records;
+    render(body.warnings);
+    const n = records.reduce((a, r) => a + r.entities.length, 0);
+    setStatus(`${records.length} sentence(s), ${n} entities in ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+  } catch (err) {
+    setStatus(err.message, true);
+  } finally {
+    $("go").disabled = false;
+  }
+}
+
+function renderCustomPanel() {
+  const options = schema.entity_types.map((t) => `<option value="${t.name}">${esc(t.label)}</option>`).join("");
+  $("pair-source").innerHTML = options;
+  $("pair-target").innerHTML = options;
+  $("pair-list").innerHTML = pendingPairs.map(([s, t], k) =>
+    `<span>${esc(s)} → ${esc(t)} <button type="button" class="x" data-pair="${k}" title="Remove">×</button></span>`).join("")
+    || `<span class="empty">No pairs yet.</span>`;
+  const custom = schema.relations.filter((r) => r.custom);
+  $("custom-rels").innerHTML = custom.map((r) =>
+    `<span title="${esc(r.description)}">${esc(r.name)} / ${esc(r.inverse)}
+       <button type="button" class="x" data-delete-rel="${r.name}" title="Delete ${esc(r.name)}">×</button></span>`).join("")
+    || `<span class="empty">None yet.</span>`;
+}
+
+async function reloadSchema(selectType) {
+  schema = await getJSON("/schema");
+  const known = new Set(schema.entity_types.map((t) => t.name));
+  selectedTypes = new Set([...selectedTypes].filter((t) => known.has(t)));
+  if (selectType) selectedTypes.add(selectType);
+  save();
+  renderTypes();
+  renderCustomPanel();
+  refreshRelations();
+}
+
+// GET that throws the server's error message (e.g. a broken custom.json) instead of returning it as data.
+async function getJSON(url) {
+  return send("GET", url);
+}
+
+async function send(method, url, body) {
+  const res = await fetch(url, {
+    method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = Array.isArray(data.detail) ? data.detail.map((d) => d.msg).join("; ") : data.detail;
+    throw new Error(detail || res.statusText);
+  }
+  return data;
+}
+
+// Two-click delete inside the page (no browser confirm dialog): first click arms, second deletes.
+async function armedDelete(button, url, errorBox) {
+  if (!button.classList.contains("armed")) {
+    button.classList.add("armed");
+    button.textContent = "delete?";
+    setTimeout(() => { button.classList.remove("armed"); button.textContent = "×"; }, 3000);
+    return;
+  }
+  try {
+    await send("DELETE", url);
+    errorBox.textContent = "";
+    await reloadSchema();
+  } catch (err) {
+    errorBox.textContent = err.message;
+  }
+}
+
+async function init() {
+  schema = await getJSON("/schema");
+  restore();
+  $("presets").innerHTML = Object.keys(schema.presets)
+    .map((p) => `<button class="ghost small" data-preset="${esc(p)}">${esc(p)}</button>`).join(" ");
+  renderTypes();
+  renderCustomPanel();
+  refreshRelations();
+}
+
+$("types").addEventListener("change", (e) => {
+  const type = e.target.dataset.type;
+  if (!type) return;
+  e.target.checked ? selectedTypes.add(type) : selectedTypes.delete(type);
+  save();
+  refreshRelations();
+});
+$("rels").addEventListener("change", (e) => {
+  const rel = e.target.dataset.rel;
+  if (!rel) return;
+  e.target.checked ? uncheckedRels.delete(rel) : uncheckedRels.add(rel);
+  save();
+});
+$("presets").addEventListener("click", (e) => {
+  const preset = e.target.dataset.preset;
+  if (preset) setTypes(schema.presets[preset]);
+});
+$("types-all").addEventListener("click", () => setTypes(schema.entity_types.map((t) => t.name)));
+$("types-none").addEventListener("click", () => setTypes([]));
+$("rels-all").addEventListener("click", () => {
+  Object.keys(availableRels).forEach((r) => uncheckedRels.delete(r));
+  save(); refreshRelations();
+});
+$("rels-none").addEventListener("click", () => {
+  Object.keys(availableRels).forEach((r) => uncheckedRels.add(r));
+  save(); refreshRelations();
+});
+$("types").addEventListener("click", (e) => {
+  const name = e.target.dataset.deleteType;
+  if (!name) return;
+  e.preventDefault();  // don't toggle the checkbox in the same label
+  armedDelete(e.target, `/custom/entity-types/${encodeURIComponent(name)}`, $("type-error"));
+});
+$("custom-rels").addEventListener("click", (e) => {
+  const name = e.target.dataset.deleteRel;
+  if (name) armedDelete(e.target, `/custom/relations/${encodeURIComponent(name)}`, $("rel-error"));
+});
+$("pair-list").addEventListener("click", (e) => {
+  if (e.target.dataset.pair === undefined) return;
+  pendingPairs.splice(Number(e.target.dataset.pair), 1);
+  renderCustomPanel();
+});
+$("pair-add").addEventListener("click", () => {
+  const pair = [$("pair-source").value, $("pair-target").value];
+  if (!pendingPairs.some(([s, t]) => s === pair[0] && t === pair[1])) pendingPairs.push(pair);
+  renderCustomPanel();
+});
+$("type-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const item = Object.fromEntries(["name", "label", "description"].map((k) => [k, form.get(k).trim()]));
+  try {
+    await send("POST", "/custom/entity-types", item);
+    e.target.reset();
+    $("type-error").textContent = "";
+    await reloadSchema(item.name);
+  } catch (err) {
+    $("type-error").textContent = err.message;
+  }
+});
+$("rel-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const item = { name: form.get("name").trim(), inverse: form.get("inverse").trim(),
+                 description: form.get("description").trim(), pairs: pendingPairs };
+  try {
+    await send("POST", "/custom/relations", item);
+    e.target.reset();
+    pendingPairs = [];
+    $("rel-error").textContent = "";
+    await reloadSchema();
+  } catch (err) {
+    $("rel-error").textContent = err.message;
+  }
+});
+$("go").addEventListener("click", extract);
+$("input").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) extract(); });
+$("download").addEventListener("click", () => {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(records, null, 2)], { type: "application/json" }));
+  Object.assign(document.createElement("a"), { href: url, download: "extraction.json" }).click();
+  URL.revokeObjectURL(url);
+});
+$("copy").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(records, null, 2));
+    setStatus("JSON copied.");
+  } catch (e) {
+    setStatus("Copy failed; use Download instead.", true);
+  }
+});
+
+init().catch((err) => setStatus("Could not load the schema: " + err.message, true));
+</script>
+</body>
+</html>
