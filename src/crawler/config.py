@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     test_database_url: str | None = None
     raw_archive_dir: Path = Path("data/raw")
     sources_config: Path = Path("config/sources.yaml")
+    ontology_path: Path = Path("config/ontology.json")
     user_agent: str = (
         "cyber-threat-crawler/0.1 (research crawler; +https://github.com/local/crawler)"
     )
