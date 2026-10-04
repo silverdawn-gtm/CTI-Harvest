@@ -7,14 +7,13 @@ character offsets.
 
 import re
 
-LEADING = set('"([{"«“‘')
-TRAILING = set('",;:!?)]}"»”’')
+LEADING = set('"([{“«')
+TRAILING = set('",;:!?)]}”»')
 FINAL = TRAILING | {"."}  # a period is only split off the last token of a sentence
 
 
 def _split_token(token: str, trailing: set[str]) -> list[str]:
-    lead: list[str] = []
-    tail: list[str] = []
+    lead, tail = [], []
     while len(token) > 1 and token[0] in LEADING:
         lead.append(token[0])
         token = token[1:]
@@ -29,7 +28,7 @@ def _split_token(token: str, trailing: set[str]) -> list[str]:
 
 def tokenize(text: str, split_final_period: bool = True) -> str:
     words = text.split()
-    tokens: list[str] = []
+    tokens = []
     for n, word in enumerate(words):
         last = split_final_period and n == len(words) - 1
         tokens.extend(_split_token(word, FINAL if last else TRAILING))
