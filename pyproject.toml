@@ -47,6 +47,11 @@ select = ["E", "F", "I", "UP", "B"]
 # datetime.now(timezone.utc) verbatim for every stored timestamp, so keep that spelling.
 ignore = ["UP017"]
 
+[tool.ruff.lint.per-file-ignores]
+# Ported from text-extractor: regexes, TLD tables and test sentences that read worse wrapped.
+"src/crawler/extraction/patterns.py" = ["E501"]
+"tests/extraction/*" = ["E501"]
+
 [tool.ruff.lint.isort]
 # The migrations live in ./alembic, which makes ruff guess that the `alembic`
 # distribution is first-party. It is not.
