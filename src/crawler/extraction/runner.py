@@ -5,6 +5,7 @@ touched. Files are written atomically, and a document whose LLM pass failed anyw
 written at all, so an interrupted or degraded run is simply resumed by running again.
 """
 
+import asyncio
 import json
 import os
 import tempfile
@@ -14,9 +15,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from crawler.extraction.ontology import Ontology
+import httpx
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from crawler.config import Settings
+from crawler.core.models import RateLimit
+from crawler.core.ratelimit import DomainRateLimiter
+from crawler.db.schema import Document
+from crawler.db.session import session_scope
+from crawler.extraction.client import build_chat_client
+from crawler.extraction.llm import LLMExtractor
+from crawler.extraction.ontology import Ontology, load_ontology
 from crawler.extraction.pipeline import DocumentExtraction, SentenceExtractor, extract_text
-from crawler.extraction.rules import RuleMatcher
+from crawler.extraction.rules import RuleMatcher, load_matcher
 
 # A provider that fails every sentence of this many documents in a row is down, out of quota,
 # or rejecting our key or schema. Stop, rather than walk the backlog writing nothing.
@@ -143,3 +155,74 @@ async def process(
         written += 1
         echo(f"{label} entities={len(result.entities):<4} relations={len(result.relations)}")
     return Summary(written, failed)
+
+
+def load_pending(
+    session: Session,
+    out_dir: Path,
+    sources: Sequence[str] | None,
+    limit: int,
+    force: bool,
+) -> list[DocumentRow]:
+    """Documents with body text and no output file yet, oldest id first.
+
+    Ids and hashes are read first and filtered against the output directory, so only the
+    bodies that will actually be extracted are loaded.
+    """
+    has_text = func.length(func.coalesce(Document.body_text, "")) > 0
+    query = select(Document.id, Document.url_hash).where(has_text).order_by(Document.id)
+    if sources:
+        query = query.where(Document.source.in_(sources))
+    ids = select_pending(session.execute(query).tuples(), out_dir, limit, force)
+    if not ids:
+        return []
+
+    rows = session.execute(
+        select(
+            Document.id,
+            Document.url,
+            Document.url_hash,
+            Document.source,
+            Document.title,
+            Document.published_at,
+            Document.body_text,
+        )
+        .where(Document.id.in_(ids))
+        .order_by(Document.id)
+    ).tuples()
+    return [DocumentRow(*row) for row in rows]
+
+
+async def run(
+    settings: Settings,
+    sources: Sequence[str] | None,
+    limit: int,
+    out_dir: Path,
+    rules_only: bool,
+    force: bool,
+    echo: Callable[[str], None],
+) -> Summary:
+    ontology = load_ontology(settings.ontology_path)
+    matcher = load_matcher()
+
+    async with httpx.AsyncClient(timeout=settings.llm_timeout) as client:
+        llm: LLMExtractor | None = None
+        if not rules_only:
+            # Built before the database is touched: a missing key should fail in a second.
+            limiter = DomainRateLimiter(
+                default=RateLimit(requests=settings.llm_requests_per_minute, per_seconds=60.0)
+            )
+            chat = build_chat_client(
+                settings, client, limiter, asyncio.Semaphore(settings.llm_parallel)
+            )
+            llm = LLMExtractor(chat, ontology)
+
+        with session_scope() as session:
+            rows = load_pending(session, out_dir, sources, limit, force)
+        if not rows:
+            echo("Nothing to extract.")
+            return Summary()
+
+        mode = "rules only" if rules_only else f"{settings.llm_provider} LLM"
+        echo(f"Extracting {len(rows)} documents ({mode}) into {out_dir}")
+        return await process(rows, out_dir, matcher, ontology, llm, echo)

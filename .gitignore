@@ -13,6 +13,7 @@ __pycache__/
 # Crawled data — raw archive and exports stay out of git
 data/raw/
 data/export/
+data/extracted/
 
 # Subagent-driven development scratch workspace
 .superpowers/

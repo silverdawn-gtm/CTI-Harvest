@@ -271,6 +271,39 @@ def export(
 
 
 @app.command()
+def extract(
+    source: str | None = typer.Option(None, help="Comma-separated source names."),
+    limit: int = typer.Option(50, min=1, help="Extract at most this many documents."),
+    out: Path | None = typer.Option(None, "--out", help="Output directory [data/extracted]."),  # noqa: B008
+    rules_only: bool = typer.Option(False, "--rules-only", help="Skip the LLM pass."),
+    force: bool = typer.Option(False, "--force", help="Redo documents that already have output."),
+) -> None:
+    """Extract CTI entities and relations into <out>/<url_hash>.json, one file per document."""
+    from crawler.extraction import runner
+    from crawler.extraction.client import LLMError
+    from crawler.extraction.ontology import OntologyError
+
+    settings = get_settings()
+    names = [n.strip() for n in source.split(",") if n.strip()] if source else None
+    out_dir = out or settings.extracted_dir
+
+    try:
+        summary = asyncio.run(
+            runner.run(settings, names, limit, out_dir, rules_only, force, typer.echo)
+        )
+    except (LLMError, OntologyError, runner.ExtractionAborted) as exc:
+        typer.secho(f"FAILED: {exc}", fg=typer.colors.RED)
+        raise typer.Exit(code=1) from exc
+
+    colour = typer.colors.YELLOW if summary.failed else typer.colors.GREEN
+    typer.secho(
+        f"Wrote {summary.written} files; {summary.failed} documents failed "
+        "and will be retried on the next run.",
+        fg=colour,
+    )
+
+
+@app.command()
 def stats() -> None:
     """Summarize what is in the database."""
     with session_scope() as session:

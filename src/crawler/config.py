@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     raw_archive_dir: Path = Path("data/raw")
     sources_config: Path = Path("config/sources.yaml")
     ontology_path: Path = Path("config/ontology.json")
+    extracted_dir: Path = Path("data/extracted")
     user_agent: str = (
         "cyber-threat-crawler/0.1 (research crawler; +https://github.com/local/crawler)"
     )
