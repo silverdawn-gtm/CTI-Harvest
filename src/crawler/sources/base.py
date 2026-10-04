@@ -18,6 +18,8 @@ class Source(Protocol):
     name: str
     kind: Literal["feed", "api", "html", "pdf"]
     license: str
+    # Where discovery starts. The loader installs `rate_limit` on this URL's host.
+    entry_url: str
     rate_limit: RateLimit
 
     def discover(

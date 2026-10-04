@@ -19,7 +19,6 @@ from datetime import datetime, timezone
 from crawler.core.article import MIN_BODY_CHARS, extract_body
 from crawler.core.fetch import FetchError
 from crawler.core.models import DiscoveredItem, ParsedDoc, ParseResult, RateLimit, RawDocument
-from crawler.sources.base import register
 
 logger = logging.getLogger(__name__)
 
@@ -69,14 +68,23 @@ class SitemapSite:
     article: str = ""  # substring every article URL contains; "" accepts all
 
 
+DEFAULT_RATE_LIMIT = RateLimit(requests=1, per_seconds=2.0)
+
+
 class SitemapSource:
     kind = "html"
-    license = "copyrighted"
-    rate_limit = RateLimit(requests=1, per_seconds=2.0)
 
-    def __init__(self, site: SitemapSite) -> None:
+    def __init__(
+        self,
+        site: SitemapSite,
+        rate_limit: RateLimit = DEFAULT_RATE_LIMIT,
+        license: str = "copyrighted",
+    ) -> None:
         self._site = site
         self.name = site.name
+        self.entry_url = site.index
+        self.rate_limit = rate_limit
+        self.license = license
 
     async def discover(
         self, since: datetime, fetcher=None, mode: str = "incremental"
@@ -180,18 +188,3 @@ def _title(raw: RawDocument) -> str | None:
         return None
     return _html.unescape(re.sub(r"\s+", " ", match.group(1))).strip() or None
 
-
-SITES = [
-    SitemapSite("krebsonsecurity", "https://krebsonsecurity.com/sitemap.xml", "posts-post"),
-    SitemapSite("thehackernews", "https://thehackernews.com/sitemap.xml", "sitemap.xml?page="),
-    SitemapSite("therecord", "https://therecord.media/sitemap.xml", "sitemaps/page-"),
-    SitemapSite("talos", "https://blog.talosintelligence.com/sitemap.xml", "sitemap-posts"),
-    SitemapSite("sentinelone", "https://www.sentinelone.com/sitemap.xml", "post-sitemap"),
-]
-
-# malwarebytes is served by wordpress.py: its only post sitemap
-# (https://www.malwarebytes.com/post-sitemap.xml) times out server-side even at 60s, while
-# its WordPress API answers in half a second.
-
-for _site in SITES:
-    register(SitemapSource(_site))

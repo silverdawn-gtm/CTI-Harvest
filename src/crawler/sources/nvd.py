@@ -8,14 +8,14 @@ import json
 import logging
 from collections.abc import AsyncIterator
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 from crawler.core.models import DiscoveredItem, ParseResult, RawDocument, VulnerabilityFact
-from crawler.sources.base import RateLimit, register
+from crawler.sources.base import RateLimit
 
 logger = logging.getLogger(__name__)
 
 API = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-HOST = "services.nvd.nist.gov"
 
 # NVD refuses date ranges wider than 120 days, and returns at most 2000 results per request.
 MAX_WINDOW_DAYS = 120
@@ -41,22 +41,31 @@ def _windows(since: datetime, until: datetime) -> list[tuple[datetime, datetime]
     return out
 
 
-def _page_url(start: datetime, end: datetime, index: int, mode: str, size: int) -> str:
+def _page_url(api: str, start: datetime, end: datetime, index: int, mode: str, size: int) -> str:
     # Backfill asks "what was published in this window"; an incremental run asks "what changed".
     # They return different sets: a lastMod query misses everything published long ago and
     # never touched since.
     prefix = "pub" if mode == "backfill" else "lastMod"
     return (
-        f"{API}?{prefix}StartDate={_stamp(start)}&{prefix}EndDate={_stamp(end)}"
+        f"{api}?{prefix}StartDate={_stamp(start)}&{prefix}EndDate={_stamp(end)}"
         f"&resultsPerPage={size}&startIndex={index}"
     )
 
 
 class NvdSource:
-    name = "nvd"
     kind = "api"
-    license = "public-domain"
-    rate_limit = NO_KEY_LIMIT
+
+    def __init__(
+        self,
+        name: str = "nvd",
+        api: str = API,
+        rate_limit: RateLimit = NO_KEY_LIMIT,
+        license: str = "public-domain",
+    ) -> None:
+        self.name = name
+        self.entry_url = api
+        self.rate_limit = rate_limit
+        self.license = license
 
     async def discover(
         self, since: datetime, fetcher=None, mode: str = "incremental"
@@ -66,7 +75,7 @@ class NvdSource:
 
         # The shared default (1 req/2s) is three times faster than NVD permits, which earns a
         # 403 within seconds. Install our own limit for this host before any request goes out.
-        fetcher.limiter.set_limit(HOST, self.rate_limit)
+        fetcher.limiter.set_limit(urlparse(self.entry_url).netloc, self.rate_limit)
 
         until = datetime.now(timezone.utc)
         for start, end in _windows(since, until):
@@ -84,13 +93,14 @@ class NvdSource:
             )
             for page in range(pages):
                 yield DiscoveredItem(
-                    url=_page_url(start, end, page * PAGE_SIZE, mode, PAGE_SIZE),
+                    url=_page_url(self.entry_url, start, end, page * PAGE_SIZE, mode, PAGE_SIZE),
                     source=self.name,
                 )
 
     async def _count(self, fetcher, start: datetime, end: datetime, mode: str) -> int:
         """Page count is only knowable from a response, so probe for totalResults first."""
-        probe = DiscoveredItem(url=_page_url(start, end, 0, mode, 1), source=self.name)
+        url = _page_url(self.entry_url, start, end, 0, mode, 1)
+        probe = DiscoveredItem(url=url, source=self.name)
         raw = await fetcher.fetch(probe)
         if raw is None:
             return 0
@@ -182,5 +192,3 @@ def _product(cve: dict) -> str | None:
     parts = _cpe_parts(cve)
     return parts[4] if len(parts) > 5 else None
 
-
-register(NvdSource())

@@ -1,8 +1,8 @@
 """One adapter, many publications.
 
-Security news sites differ only in feed URL, so adding a publication is a config entry in
-`SITES` rather than a new module. Each site registers as its own `Source` so it gets its own
-`last_success_at`, its own circuit breaker, and its own row in `stats`.
+Security news sites differ only in feed URL, so adding a publication is an entry in
+config/sources.yaml rather than a new module. Each site registers as its own `Source` so it
+gets its own `last_success_at`, its own circuit breaker, and its own row in `stats`.
 """
 
 import logging
@@ -13,34 +13,13 @@ import feedparser
 import trafilatura
 
 from crawler.core.models import DiscoveredItem, ParsedDoc, ParseResult, RawDocument
-from crawler.sources.base import RateLimit, register
+from crawler.sources.base import RateLimit
 
 logger = logging.getLogger(__name__)
 
 # Below this, treat the extraction as failed and fall back to the feed summary. Real security
 # articles run to thousands of characters; a few hundred means the selectors missed.
 MIN_BODY_CHARS = 200
-
-SITES: list[tuple[str, str]] = [
-    ("bleepingcomputer", "https://www.bleepingcomputer.com/feed/"),
-    ("securityweek", "https://www.securityweek.com/feed/"),
-    ("projectzero", "https://googleprojectzero.blogspot.com/feeds/posts/default"),
-]
-
-# Only the sites with no better route are left here. RSS carries a few weeks at most, so
-# anything reachable another way is served by that adapter instead:
-#   wordpress.py - unit42, microsoft (100 full-text posts per request)
-#   sitemap.py   - krebsonsecurity, thehackernews, therecord, talos, sentinelone,
-#                  malwarebytes (whole archive, one request per article)
-#
-# bleepingcomputer publishes gzipped .txt.gz sitemaps mixed with forum threads, and
-# securityweek returns 403 on both its sitemap and its WordPress API, so both stay on RSS.
-#
-# Removed rather than worked around:
-#   darkreading  - returns 403 on every article; the publisher refuses automated clients,
-#                  and spoofing a browser User-Agent to get past that is not acceptable.
-#   googletag    - https://blog.google/threat-analysis-group/rss/ now 404s.
-
 
 def _entry_published(entry) -> datetime | None:
     """Feed dates arrive as struct_time in UTC, or not at all."""
@@ -50,16 +29,26 @@ def _entry_published(entry) -> datetime | None:
     return datetime(*parsed[:6], tzinfo=timezone.utc)
 
 
+# Deliberately slower than the 1/2s default: these are small publishers, and the crawler
+# walks every article in a feed back to back.
+DEFAULT_RATE_LIMIT = RateLimit(requests=1, per_seconds=3.0)
+
+
 class NewsRssSource:
     kind = "feed"
-    license = "copyrighted"
-    # Deliberately slower than the 1/2s default: these are small publishers, and the crawler
-    # walks every article in a feed back to back.
-    rate_limit = RateLimit(requests=1, per_seconds=3.0)
 
-    def __init__(self, name: str, feed_url: str) -> None:
+    def __init__(
+        self,
+        name: str,
+        feed_url: str,
+        rate_limit: RateLimit = DEFAULT_RATE_LIMIT,
+        license: str = "copyrighted",
+    ) -> None:
         self.name = name
         self.feed_url = feed_url
+        self.entry_url = feed_url
+        self.rate_limit = rate_limit
+        self.license = license
 
     async def discover(
         self, since: datetime, fetcher=None, mode: str = "incremental"
@@ -123,6 +112,3 @@ class NewsRssSource:
             )
         )
 
-
-for _name, _feed in SITES:
-    register(NewsRssSource(_name, _feed))

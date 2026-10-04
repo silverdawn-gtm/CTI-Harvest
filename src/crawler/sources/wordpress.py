@@ -16,22 +16,13 @@ import trafilatura
 
 from crawler.core.fetch import FetchError
 from crawler.core.models import DiscoveredItem, ParsedDoc, ParseResult, RawDocument
-from crawler.sources.base import RateLimit, register
+from crawler.sources.base import RateLimit
 
 logger = logging.getLogger(__name__)
 
 PER_PAGE = 100
 MAX_PAGES = 200  # Backstop: 20,000 posts is far beyond any of these publications.
 _TAGS = re.compile(r"<[^>]+>")
-
-SITES: list[tuple[str, str]] = [
-    ("unit42", "https://unit42.paloaltonetworks.com/wp-json/wp/v2/posts"),
-    ("microsoft", "https://www.microsoft.com/en-us/security/blog/wp-json/wp/v2/posts"),
-    # Note the root path, not /blog: the API lives at the domain root even though every
-    # article sits under /blog/. Probing the /blog prefix returns a 404 and reads as "no API".
-    ("malwarebytes", "https://www.malwarebytes.com/wp-json/wp/v2/posts"),
-]
-
 
 def _text(fragment: str) -> str:
     return html.unescape(_TAGS.sub("", fragment or "")).strip()
@@ -47,14 +38,24 @@ def _when(value: str | None) -> datetime | None:
         return None
 
 
+DEFAULT_RATE_LIMIT = RateLimit(requests=1, per_seconds=2.0)
+
+
 class WordPressSource:
     kind = "api"
-    license = "copyrighted"
-    rate_limit = RateLimit(requests=1, per_seconds=2.0)
 
-    def __init__(self, name: str, api: str) -> None:
+    def __init__(
+        self,
+        name: str,
+        api: str,
+        rate_limit: RateLimit = DEFAULT_RATE_LIMIT,
+        license: str = "copyrighted",
+    ) -> None:
         self.name = name
         self.api = api
+        self.entry_url = api
+        self.rate_limit = rate_limit
+        self.license = license
 
     def _page_url(self, since: datetime, page: int) -> str:
         after = since.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
@@ -125,6 +126,3 @@ class WordPressSource:
 
         return ParseResult(documents=tuple(docs), warnings=tuple(warnings))
 
-
-for _name, _api in SITES:
-    register(WordPressSource(_name, _api))

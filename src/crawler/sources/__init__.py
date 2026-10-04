@@ -1,7 +1,1 @@
-from crawler.sources import (  # noqa: F401  - imported for registration side effects
-    kev,
-    news_rss,
-    nvd,
-    sitemap,
-    wordpress,
-)
+"""Source adapters. Which sources exist is decided by config/sources.yaml; see loader.py."""

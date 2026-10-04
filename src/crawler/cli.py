@@ -14,9 +14,9 @@ from crawler.core.pipeline import run_source
 from crawler.core.ratelimit import DomainRateLimiter
 from crawler.db.schema import Document
 from crawler.db.session import session_scope
-
-# Importing the package runs its __init__, which registers every source adapter.
 from crawler.sources import base as source_registry
+from crawler.sources.catalog import CatalogError
+from crawler.sources.loader import apply_rate_limits, register_from_config
 
 app = typer.Typer(help="Cyber threat intelligence crawler.")
 db_app = typer.Typer(help="Database operations.")
@@ -60,8 +60,18 @@ async def _run_targets(targets, since, mode: str) -> None:
         typer.echo(await done)
 
 
+def _load_sources() -> None:
+    """Register every enabled source in the catalog. A bad catalog stops the command here."""
+    try:
+        register_from_config(get_settings().sources_config)
+    except CatalogError as exc:
+        typer.secho(f"Invalid source catalog: {exc}", fg=typer.colors.RED)
+        raise typer.Exit(code=2) from exc
+
+
 def _targets(source: str | None):
     """`--source a,b,c` selects several; omitting it selects everything registered."""
+    _load_sources()
     if not source:
         return source_registry.all_sources()
     return [source_registry.get_source(name.strip()) for name in source.split(",") if name.strip()]
@@ -71,6 +81,7 @@ def build_fetcher() -> Fetcher:
     settings = get_settings()
     client = httpx.AsyncClient(timeout=settings.request_timeout)
     limiter = DomainRateLimiter(default=source_registry.RateLimit(requests=1, per_seconds=2.0))
+    apply_rate_limits(limiter, source_registry.all_sources())
     robots = RobotsCache(client=client, user_agent=settings.user_agent)
     return Fetcher(client=client, limiter=limiter, user_agent=settings.user_agent, robots=robots)
 
@@ -102,6 +113,7 @@ def db_upgrade() -> None:
 @sources_app.command("list")
 def sources_list() -> None:
     """Show every registered source."""
+    _load_sources()
     for source in source_registry.all_sources():
         typer.echo(f"{source.name:<16} {source.kind:<6} {source.license}")
 

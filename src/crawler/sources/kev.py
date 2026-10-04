@@ -10,7 +10,7 @@ from crawler.core.models import (
     RawDocument,
     VulnerabilityFact,
 )
-from crawler.sources.base import RateLimit, register
+from crawler.sources.base import RateLimit
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,9 @@ def _parse_date(value: str | None) -> datetime | None:
         return None
 
 
+DEFAULT_RATE_LIMIT = RateLimit(requests=1, per_seconds=2.0)
+
+
 class KevSource:
     """CISA Known Exploited Vulnerabilities catalog: one JSON file, many vulnerabilities."""
 
@@ -31,15 +34,24 @@ class KevSource:
         "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
     )
 
-    name = "kev"
     kind = "api"
-    license = "public-domain"
-    rate_limit = RateLimit(requests=1, per_seconds=2.0)
+
+    def __init__(
+        self,
+        name: str = "kev",
+        catalog_url: str = CATALOG_URL,
+        rate_limit: RateLimit = DEFAULT_RATE_LIMIT,
+        license: str = "public-domain",
+    ) -> None:
+        self.name = name
+        self.entry_url = catalog_url
+        self.rate_limit = rate_limit
+        self.license = license
 
     async def discover(
         self, since: datetime, fetcher=None, mode: str = "incremental"
     ) -> AsyncIterator[DiscoveredItem]:
-        yield DiscoveredItem(url=self.CATALOG_URL, source=self.name)
+        yield DiscoveredItem(url=self.entry_url, source=self.name)
 
     def parse(self, raw: RawDocument) -> ParseResult:
         payload = json.loads(raw.content)
@@ -49,7 +61,9 @@ class KevSource:
         for entry in payload.get("vulnerabilities", []):
             cve_id = entry.get("cveID")
             if not cve_id:
-                logger.warning("kev: entry without cveID skipped: %r", entry.get("product"))
+                logger.warning(
+                    "%s: entry without cveID skipped: %r", self.name, entry.get("product")
+                )
                 continue
 
             added = _parse_date(entry.get("dateAdded"))
@@ -67,7 +81,7 @@ class KevSource:
 
             docs.append(
                 ParsedDoc(
-                    url=f"{self.CATALOG_URL}#{cve_id}",
+                    url=f"{self.entry_url}#{cve_id}",
                     source=self.name,
                     title=entry.get("vulnerabilityName") or cve_id,
                     body_text=body,
@@ -88,5 +102,3 @@ class KevSource:
 
         return ParseResult(documents=tuple(docs), vulnerabilities=tuple(facts))
 
-
-register(KevSource())
