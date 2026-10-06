@@ -1,7 +1,7 @@
 [project]
 name = "crawler"
 version = "0.1.0"
-description = "Add your description here"
+description = "Cyber threat intelligence crawler and CTI entity/relation extractor"
 readme = "README.md"
 authors = [
     { name = "Goutham krishna K S", email = "silverdawn1011@gmail.com" }
