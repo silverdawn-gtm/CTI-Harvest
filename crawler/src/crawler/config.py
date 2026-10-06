@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # as done for an LLM run.
     extracted_rules_dir: Path = Path("data/extracted-rules")
     user_agent: str = (
-        "cyber-threat-crawler/0.1 (research crawler; +https://github.com/local/crawler)"
+        "cyber-threat-crawler/0.1 (research crawler; +https://github.com/silverdawn-gtm/CTI-Harvest)"
     )
     request_timeout: float = 30.0
 
